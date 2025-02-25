@@ -28,15 +28,15 @@ cd fruit-gym
 pip install -e .
 ```
 
+## Teleoperation
+The cameras mounted on the gripper enable efficient first person view teleoperation. Examples of control using a mouse and keyboard or a gamepad are given in fruit_gym/test
+
 ## Domain Randomization
 Fruit Gym uses a YAML configuration file to control aspects of domain randomization, the yaml file is found in fruit_gym/configs
 
 ## Credits
 
 This repository builds upon the work of [serl](https://github.com/rail-berkeley/serl). Thanks to all contributors to the underlying frameworks.
-
-## Teleoperation
-The cameras mounted on the gripper enable efficient first person view teleoperation examples of control using a mouse and keyboard or a gamepad are given in fruit_gym/test
 
 ## Citation
 
