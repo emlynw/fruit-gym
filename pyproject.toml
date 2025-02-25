@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools >= 61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fruit-gym"
+version = "0.1.0"
+description = "A Gymnasium environment for fruit picking tasks."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+
+dependencies = [
+  "numpy",
+  "gymnasium == 0.29.1",
+  "mujoco >= 3.0",
+  "pyyaml",
+]
+
+[project.optional-dependencies]
+teleop = [
+  "opencv-python",
+  "pygame",
+]
+
+
+[project.urls]
+Home = "https://github.com/emlynw/fruit-gym"
+
