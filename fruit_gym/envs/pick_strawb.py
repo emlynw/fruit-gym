@@ -10,7 +10,7 @@ from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from gymnasium.spaces import Box, Dict
 from scipy.spatial.transform import Rotation
-from fruit_gym.controllers import opspace
+from fruit_gym.controllers.opspace import opspace
 from fruit_gym.envs.randomization import (
     lighting_noise,
     action_scale_noise,
@@ -748,7 +748,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         info = {}
         if self.reward_type == "dense":
             rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green': r_green, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_green': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 2.0 , 'r_smooth': 1.0}
+            reward_scales = {'r_grasp': 20.0, 'r_red': 4.0, 'r_green': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 2.0 , 'r_smooth': 1.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards

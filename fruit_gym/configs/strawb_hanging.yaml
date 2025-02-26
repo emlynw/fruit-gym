@@ -1,0 +1,57 @@
+domain_randomization:
+  lighting:
+    enabled: true
+    position_range_low: [-0.8, -0.5, -0.05]
+    position_range_high: [1.2, 0.5, 0.2]
+    diffuse_range:
+      low: [0.05, 0.05, 0.05]
+      high: [0.3, 0.3, 0.3]
+    ambient_range:
+      low: [0.0, 0.0, 0.0]
+      high: [0.2, 0.2, 0.2]
+    specular_range:
+      low: [0.0, 0.0, 0.0]
+      high: [0.5, 0.5, 0.5]
+    intensity_range: [0.1, 1.0]
+
+  action_scale:
+    enabled: true
+    pos_scale_range: [0.008, 0.012]
+    rot_scale_range: [0.18, 0.3]
+
+  initial_state:
+    enabled: true
+    ee_noise_low: [-0.04, -0.05, -0.05]
+    ee_noise_high: [0.04, 0.05, 0.05]
+
+  cameras:
+    enabled: true
+    front:
+      position_noise_low: [-0.05, -0.05, -0.02]
+      position_noise_high: [0.05, 0.05, 0.02]
+      quat_noise_range: [-0.02, 0.02]
+    wrist1:
+      quat_noise_range: [-0.02, 0.02]
+    wrist2:
+      quat_noise_range: [-0.02, 0.02]
+
+  table:
+    enabled: true
+    color_noise_range: [-0.05, 0.2]
+
+  wall:
+    enabled: true
+    color_noise_range: [-0.1, 0.1]
+
+  floor:
+    enabled: true
+
+  skybox:
+    enabled: true
+
+  objects:
+    enabled: true
+    target_pos_noise_low: [-0.02, -0.1, -0.1]
+    target_pos_noise_high: [0.08, 0.1, 0.2]
+    distract_pos_noise_low: [-0.1, -0.05, -0.03]
+    distract_pos_noise_high: [0.05, 0.05, 0.03]

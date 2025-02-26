@@ -1,4 +1,4 @@
-<mujoco model="INB0104">
+<mujoco model="fruit_gym">
   <compiler angle="radian" meshdir="assets/"/>
 
   <option noslip_tolerance="0" viscosity="0.0009" integrator="implicitfast" noslip_iterations="5">

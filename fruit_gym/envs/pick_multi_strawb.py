@@ -10,7 +10,7 @@ from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from gymnasium.spaces import Box, Dict
 from scipy.spatial.transform import Rotation
-from fruit_gym.controllers import opspace
+from fruit_gym.controllers.opspace import opspace
 from fruit_gym.envs.randomization import (
     lighting_noise,
     action_scale_noise,
