@@ -42,14 +42,6 @@ This repository builds upon the work of [serl](https://github.com/rail-berkeley/
 
 If you find Fruit Gym useful in your research, please consider citing it as follows:
 
-```bibtex
-@misc{YourName2025FruitGym,
-  title     = {Fruit Gym: A Collection of Robotic Manipulation Environments for Fruit Picking Tasks},
-  author    = {Your Name},
-  year      = {2025},
-  publisher = {GitHub},
-  note      = {Available at \url{https://github.com/yourusername/fruit-gym}},
-}
-```
+To do
 
 
