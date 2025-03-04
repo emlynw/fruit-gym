@@ -273,7 +273,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             else:
                 self.floor_tex_ids.append(self.model.texture(texture_name).id)
 
-        self.initial_vine_rotation = Rotation.from_quat(np.roll(self.model.body_quat[self.model.body("vine").id], -1))
+        self.initial_vine_rotation = Rotation.from_quat(np.roll(self.model.body_quat[self.model.body("vine1").id], -1))
 
         self.initial_position = np.array([0.1, 0.0, 0.75], dtype=np.float32)
         self.initial_orientation = [0.725, 0.0, 0.688, 0.0]
@@ -284,7 +284,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.init_headlight_specular = self.model.vis.headlight.specular.copy()
 
         self.num_green = 7
-        self.model.body_pos[self.model.body("vine").id] = self.default_obj_pos
+        self.model.body_pos[self.model.body("vine1").id] = self.default_obj_pos
         for i in range(2, self.num_green+2):
             self.model.body_pos[self.model.body(f"vine{i}").id] = self.default_obj_pos + np.array([-0.05, 0.0, 0.0])
         self.active_indices = np.array(list(range(2, self.num_green + 2)))
@@ -299,20 +299,20 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
         target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
         target_pos = self.default_obj_pos + target_pos_noise
-        self.model.body_pos[self.model.body("vine").id] = target_pos
+        self.model.body_pos[self.model.body("vine1").id] = target_pos
         # Target orientation
         random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)  # Random angle in radians
         z_rotation = Rotation.from_euler('z', random_z_angle)
         new_rotation = z_rotation * self.initial_vine_rotation
         new_quat = new_rotation.as_quat()
-        self.model.body_quat[self.model.body("vine").id] = [new_quat[3], new_quat[0], new_quat[1], new_quat[2]]
+        self.model.body_quat[self.model.body("vine1").id] = [new_quat[3], new_quat[0], new_quat[1], new_quat[2]]
 
         red_rgba = np.array([0.55, 0.1, 0.1, 1])
         green_rgba = np.array([0.5, 0.63, 0.45, 1])
         self.red_blocks = [1]
         self.green_blocks = []
-        self.red_positions = []
-        self.green_positions = []
+        self.red_positions = {}
+        self.green_positions = {}
 
         target_names = ["block1", "block1_big", "block1_small"]
         sub_geom_ids = {}
@@ -417,9 +417,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.data.qacc[:] = 0
         mujoco.mj_forward(self.model, self.data)
         for i in self.red_blocks:
-            self.red_positions.append(self.data.sensor(f"block{i}_pos").data)
+            self.red_positions[i] = self.data.sensor(f"block{i}_pos").data.copy()
         for j in self.green_blocks:
-            self.green_positions.append(self.data.sensor(f"block{j}_pos").data)
+            self.green_positions[i] = self.data.sensor(f"block{j}_pos").data.copy()
 
 
     def domain_randomization(self) -> None:
@@ -722,52 +722,44 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         
     def _compute_reward(self, action):
         tcp_pos = self.data.sensor("long_pinch_pos").data
-        
-        self.red_positions_new = []
-        self.red_stems = []
-        self.green_positions_new = []
-        for i, v in enumerate(self.red_blocks):
-            self.red_positions_new.append(self.data.sensor(f"block{v}_pos").data)
-            self.red_stems.append
-        for i, v in enumerate(self.green_blocks):
-            self.green_positions_new.append(self.data.sensor(f"block{v}_pos").data)
-        self.red_positions_new = np.array(self.red_positions_new)
-        self.green_positions_new = np.array(self.green_positions_new)
 
         # Positive reward for moving towards closest red strawb
-        if len(self.red_positions) > 0:
-            completed = False
-            red_dists = [np.linalg.norm(pos - tcp_pos) for pos in self.red_positions]
-            min_red_dist = min(red_dists)
+        if len(self.red_blocks) > 0:
+            dists = []
+            for red_idx in self.red_blocks:
+                curr_pos = self.data.sensor(f"block{red_idx}_pos").data
+                dist = np.linalg.norm(curr_pos - tcp_pos)
+                dists.append(dist)
+            min_red_dist = min(dists)
             r_red = 1 - np.tanh(5 * min_red_dist)
         else:
             r_red = 0.0
-            completed = True
 
-        # Negative reward for moving green strawbs away from their initial positions
-        total_green_distances = np.linalg.norm(self.green_positions_new-self.green_positions)
-        r_green = 1- np.tanh(5*np.sum(total_green_distances))
-
-        # Penalize lage actions
+        # Penalize large actions an large changes in actions (reduce shakiness)
         r_energy = -np.linalg.norm(action[:-1])
-
-        # Penalize large changes in actions (reduce shakiness)
         r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1]) 
         self.prev_action = action
 
         # Check if gripper pads are in contact with the object
+        grasped_idx = None
         right_finger_contact_good = False
         left_finger_contact_good = False
         right_finger_contact_bad = False
         left_finger_contact_bad = False
-        success = False
+        good_grasp = False
         bad_grasp = False
+        r_green = 0
         allowed_prefixes = []
         for i in self.red_blocks:
             allowed_prefixes.append(f"aG{chr(ord('`')+i)}")
+
         for i in range(self.data.ncon):
-            geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1)
-            geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2)
+            geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
+            geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
+
+            if ("finger" in geom1_name) or ("finger" in geom2_name):
+                if ("block" in geom1_name) or (f"block" in geom2_name):
+                    r_green = -1.0
 
             if "right_finger_inner" in (geom1_name, geom2_name):
                 # Identify the other geom.
@@ -779,6 +771,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         stem_idx = int(num_part)
                         if stem_idx in self.red_blocks:
                             right_finger_contact_good = True
+                            grasped_idx = stem_idx
                     except ValueError:
                         pass  # not a valid integer, skip
                 elif other in allowed_prefixes or other =="left_finger_inner":
@@ -786,6 +779,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 else:
                     right_finger_contact_good = False
                     right_finger_contact_bad = True
+                    stem_idx = None
 
             if "left_finger_inner" in (geom1_name, geom2_name):
                 other = geom1_name if geom2_name == "left_finger_inner" else geom2_name
@@ -802,33 +796,22 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 else:
                     left_finger_contact_good = False
                     left_finger_contact_bad = True
+                    stem_idx = None
 
             if right_finger_contact_good and left_finger_contact_good:
-                success=True
+                good_grasp=True
             if right_finger_contact_bad and left_finger_contact_bad:
                 bad_grasp = True
 
-        if success:
+        r_grasp = 0.0
+        r_bad_grasp = -float(bad_grasp)
+        if good_grasp:
             # Look for the red stem index that was contacted.
-            grasped_idx = None
-            for i in range(self.data.ncon):
-                geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1)
-                geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2)
-                for name in (geom1_name, geom2_name):
-                    if name is None:
-                        continue
-                    if name.startswith("stem"):
-                        try:
-                            idx = int(name[len("stem"):])
-                        except ValueError:
-                            continue
-                        if idx in self.red_blocks:
-                            grasped_idx = idx
-                            break
-                if grasped_idx is not None:
-                    break
-
-            if grasped_idx is not None:
+            curr_pos = self.data.sensor(f"block{grasped_idx}_pos").data
+            init_pos = self.red_positions[grasped_idx]
+            dist_from_init = np.linalg.norm(curr_pos - init_pos)
+            if dist_from_init < 0.05 and grasped_idx is not None:
+                r_grasp = 1.0
                 # Make the strawberry invisible by updating its geoms.
                 # We assume its associated bodies are "blockX", "blockX_big", "blockX_small".
                 for suffix in ["", "_big", "_small"]:
@@ -850,23 +833,18 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 if grasped_idx in self.active_indices:
                     self.active_indices = np.delete(self.active_indices, np.where(self.active_indices == grasped_idx))
                 if grasped_idx in self.red_blocks:
-                    self.red_blocks.remove(grasped_idx)
-                # Also update red_positions by filtering out the grasped index.
-                # (Assuming self.red_positions is a list of positions corresponding to indices in self.red_blocks.)
-                new_red_positions = []
-                for i, v in enumerate(self.red_blocks):
-                    if v != grasped_idx:
-                        new_red_positions.append(self.data.sensor(f"block{v}_pos").data)
-                self.red_positions = new_red_positions
-            
-            
-        r_grasp = float(success) 
-        r_bad_grasp = -float(bad_grasp)
+                    self.red_blocks.remove(grasped_idx)        
+            else:
+                r_grasp = 0.0    
         
+        if len(self.red_blocks) == 0:
+            completed = True
+        else:
+            completed = False
         info = {}
         if self.reward_type == "dense":
             rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green': r_green, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 20.0, 'r_red': 4.0, 'r_green': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 2.0 , 'r_smooth': 1.0}
+            reward_scales = {'r_grasp': 100.0, 'r_red': 4.0, 'r_green': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 0.0 , 'r_smooth': 1.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards

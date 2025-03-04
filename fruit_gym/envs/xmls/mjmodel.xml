@@ -423,7 +423,7 @@
       <geom type="capsule" size="0.01 1.0"/>
     </body> -->
 
-    <body name="vine" pos="0.45 -0.03 0.9" quat="0.707388 0 0.706825 0">
+    <body name="vine1" pos="0.45 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="aB_first">
         <joint name="aJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
         <geom name="aG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
