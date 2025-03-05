@@ -8,7 +8,7 @@ import time
 
 def main():
     render_mode = "rgb_array"
-    env = gym.make("PickStrawbEnv", render_mode=render_mode, randomize_domain=True, reward_type="dense", ee_dof=6)
+    env = gym.make("PickMultiStrawbEnv", render_mode=render_mode, randomize_domain=True, reward_type="dense", ee_dof=6)
     env = GamepadIntervention(env)
     env = TimeLimit(env, max_episode_steps=500)
     waitkey = 10

@@ -461,11 +461,9 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             
             self._block_init = self.data.sensor("block1_pos").data.copy()
 
-            self.distractor_displacements = []
+            self.distractor_displacements = {}
             for i in self.active_indices:
-                self.distractor_displacements.append(self.data.sensor(f"block{i}_pos").data)
-            self.distractor_displacements = np.array(self.distractor_displacements)
-            self.distractor_displacements_2 = self.distractor_displacements.copy()
+                self.distractor_displacements[i] = self.data.sensor(f"block{i}_pos").data.copy()
 
             self.grasp = -1.0
             self.prev_grasp_time = 0.0
@@ -620,7 +618,8 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
         # Reward
         reward, info = self._compute_reward(action)
-        if info['success'] == True:
+        if info['success'] == True and self.reward_type == "sparse":
+            reward = 1.0
             terminated = True
         else:
             terminated = False
@@ -692,10 +691,17 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         tcp_pos = self.data.sensor("long_pinch_pos").data
         r_red = 1 - np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
 
+        red_distance = np.linalg.norm(block1_pos - self._block_init)
+        green_distance = 0
+        for i in self.distractor_displacements:
+            green_distance += np.linalg.norm(self.distractor_displacements[i] - self.data.sensor(f"block{i}_pos").data)
+
+        total_distance = red_distance + green_distance
+        r_dist = 1- np.tanh(5*np.sum(total_distance))
+
         # Movement rewards
         r_energy = -np.linalg.norm(action[:-1])
         r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1]) 
-        r_time = -1.0
         self.prev_action = action
 
         # Check if gripper pads are in contact with the object
@@ -705,7 +711,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         left_finger_contact_bad = False
         good_grasp = False
         bad_grasp = False
-        r_green = 0
+        r_green_col = 0
 
         # Check collisions
         for i in range(self.data.ncon):
@@ -714,7 +720,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
             if ("finger" in geom1_name) or ("finger" in geom2_name):
                 if ("block" in geom1_name) or (f"block" in geom2_name):
-                    r_green = -1.0
+                    r_green_col = -1.0
 
             if geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
                 if geom1_name == "stem1" or geom2_name == "stem1":
@@ -747,8 +753,8 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         
         info = {}
         if self.reward_type == "dense":
-            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green': r_green, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_time': r_time, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 10.0, 'r_red': 4.0, 'r_green': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 0.0, 'r_time': 0.05, 'r_smooth': 1.0}
+            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
+            reward_scales = {'r_grasp': 10.0, 'r_red': 4.0, 'r_green_col': 1.0, 'r_dist': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 2.0, 'r_smooth': 1.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards

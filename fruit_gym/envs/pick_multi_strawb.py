@@ -419,7 +419,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         for i in self.red_blocks:
             self.red_positions[i] = self.data.sensor(f"block{i}_pos").data.copy()
         for j in self.green_blocks:
-            self.green_positions[i] = self.data.sensor(f"block{j}_pos").data.copy()
+            self.green_positions[j] = self.data.sensor(f"block{j}_pos").data.copy()
 
 
     def domain_randomization(self) -> None:
@@ -735,6 +735,15 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         else:
             r_red = 0.0
 
+        red_distance = 0
+        green_distance = 0
+        for i in self.red_blocks:
+            red_distance += np.linalg.norm(self.data.sensor(f"block{i}_pos").data - self.red_positions[i])
+        for j in self.green_blocks:
+            green_distance += np.linalg.norm(self.data.sensor(f"block{j}_pos").data - self.green_positions[j])
+        total_distance = red_distance + green_distance
+        r_dist = 1 - np.tanh(5 * total_distance)
+
         # Penalize large actions an large changes in actions (reduce shakiness)
         r_energy = -np.linalg.norm(action[:-1])
         r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1]) 
@@ -748,7 +757,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         left_finger_contact_bad = False
         good_grasp = False
         bad_grasp = False
-        r_green = 0
+        r_col = 0
         allowed_prefixes = []
         for i in self.red_blocks:
             allowed_prefixes.append(f"aG{chr(ord('`')+i)}")
@@ -759,7 +768,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
             if ("finger" in geom1_name) or ("finger" in geom2_name):
                 if ("block" in geom1_name) or (f"block" in geom2_name):
-                    r_green = -1.0
+                    r_col = -1.0
 
             if "right_finger_inner" in (geom1_name, geom2_name):
                 # Identify the other geom.
@@ -843,8 +852,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             completed = False
         info = {}
         if self.reward_type == "dense":
-            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green': r_green, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 100.0, 'r_red': 4.0, 'r_green': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 0.0 , 'r_smooth': 1.0}
+            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_col': r_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
+            reward_scales = {'r_grasp': 100.0, 'r_red': 4.0, 'r_col': 1.0, 'r_dist': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 0.0 , 'r_smooth': 1.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards
