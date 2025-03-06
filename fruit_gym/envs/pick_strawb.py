@@ -470,6 +470,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             self.prev_gripper_state = 0 # 0 for open, 1 for closed
             self.gripper_state = 0
             self.gripper_blocked = False
+            self.last_gripper_pos = 2*self.data.qpos[8]/self._GRIPPER_HOME[0]
 
              # Get the current end-effector pose from sensors.
             current_pos = self.data.sensor("pinch_pos").data.copy()
@@ -689,7 +690,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
     def _compute_reward(self, action):
         block1_pos = self.data.sensor("block1_pos").data
         tcp_pos = self.data.sensor("long_pinch_pos").data
-        r_red = 1 - np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
+        r_red =  -np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
 
         red_distance = np.linalg.norm(block1_pos - self._block_init)
         green_distance = 0
@@ -697,12 +698,19 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             green_distance += np.linalg.norm(self.distractor_displacements[i] - self.data.sensor(f"block{i}_pos").data)
 
         total_distance = red_distance + green_distance
-        r_dist = 1- np.tanh(5*np.sum(total_distance))
+        r_dist = -np.tanh(5*np.sum(total_distance))
 
         # Movement rewards
-        r_energy = -np.linalg.norm(action[:-1])
-        r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1]) 
+        r_energy = -np.tanh(5*np.linalg.norm(action[:-1]))
+        r_smooth = -np.tanh(np.linalg.norm(action[:-1] - self.prev_action[:-1]) )
         self.prev_action = action
+        # Gripper Penalty
+        if (self.last_gripper_pos > 0.9 and action[-1] > 0.5) or (self.last_gripper_pos < 0.1 and action[-1] < -0.5):
+            grasp_penalty = -1.0
+        else:
+            grasp_penalty = 0.0
+        self.last_gripper_pos = 2*self.data.qpos[8]/self._GRIPPER_HOME[0]
+        
 
         # Check if gripper pads are in contact with the object
         right_finger_contact_good = False
@@ -753,8 +761,8 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         
         info = {}
         if self.reward_type == "dense":
-            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 10.0, 'r_red': 4.0, 'r_green_col': 1.0, 'r_dist': 1.0, 'r_bad_grasp': 2.0, 'r_energy': 2.0, 'r_smooth': 1.0}
+            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth, 'grasp_penalty': grasp_penalty}
+            reward_scales = {'r_grasp': 10.0, 'r_red': 4.0, 'r_green_col': 1.0, 'r_dist': 1.0, 'r_bad_grasp': 1.0, 'r_energy': 1.0, 'r_smooth': 1.0, 'grasp_penalty': 1.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards
