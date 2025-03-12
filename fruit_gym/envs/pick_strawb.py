@@ -810,11 +810,11 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
             geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
 
-            if geom1_name == "right_finger" or geom2_name == "right_finger":
-                if geom1_name == "stem" or geom2_name == "stem":
+            if geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
+                if geom1_name == "stem1" or geom2_name == "stem1":
                     right_finger_contact = True
-            if geom1_name =="left_finger" or geom2_name =="left_finger":
-                if geom1_name == "stem" or geom2_name == "stem":
+            if geom1_name =="left_finger_inner" or geom2_name =="left_finger_inner":
+                if geom1_name == "stem1" or geom2_name == "stem1":
                     left_finger_contact = True
             if right_finger_contact and left_finger_contact:
                 success=True
