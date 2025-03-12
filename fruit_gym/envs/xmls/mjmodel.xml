@@ -73,7 +73,6 @@
     <texture type="2d" name="plywood" file="textures/Wood.png"/>
     <texture type="2d" name="brick_wall" file="textures/Bricks0104.png"/>
     <texture type="2d" name="aluminium" file="textures/aluminium.png"/>
-    <texture type="2d" name="lab_0104" file="textures/lab_0104.png"/>
     <texture type="2d" name="Grass001" file="textures/Grass001_2K-PNG_Color.png"/>
     <texture type="2d" name="PavingStones131" file="textures/PavingStones131_2K-PNG_Color.png"/>
     <texture type="2d" name="Bricks095" file="textures/Bricks095_2K-PNG_Color.png"/>
@@ -128,7 +127,6 @@
     <material name="table_surface" texture="plywood" specular="1" shininess="1"/>
     <material name="brick_wall" texture="brick_wall" texrepeat="2 2" specular="1" shininess="1"/>
     <material name="aluminium" texture="aluminium" texuniform="true" specular="1" shininess="1"/>
-    <material name="front_wall" texture="lab_0104" specular="1" shininess="1"/>
     <material name="floor" texture="Grass001" specular="1" shininess="1"/>
     <material name="strawberry_material" rgba="0.55 0.1 0.1 1" shininess="0.01" specular="0.01" reflectance="0.05" texuniform="true"/>
     <material name="strawberry_leaves" texture="strawb_leaves" shininess="0.1" specular="0.1" reflectance="0.5" texuniform="true"/>
