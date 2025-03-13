@@ -395,7 +395,7 @@
         </body>
       </body>
     </body>
-    <body name="front" pos="0.900 -0.647 0.946" xyaxes="0.761 0.649 0.000 -0.195 0.229 0.954">
+    <body name="front" pos="1.040 1.211 0.499" xyaxes="-0.811 0.585 -0.000 -0.007 -0.010 1.000">
       <camera name="front" pos="0 0 0" fovy="41"/>
     </body>
 
