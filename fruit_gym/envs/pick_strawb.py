@@ -370,6 +370,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
             # If this vine is NOT active, disable its collisions.
             if i not in active_indices:
+                self.model.body_pos[vine_body.id] = np.array([-1.0, 0.0, 1.0])
                 for name in sub_names:
                     for geom_id in sub_geom_ids[name]:
                         self.model.geom_group[geom_id] = 3
@@ -673,10 +674,10 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         position_noise_std = self.cfg.get("ee_pos_noise", 0.01)  # e.g., 1 cm standard deviation
         orientation_noise_std = self.cfg.get("ee_ori_noise", 0.005)  # e.g., small rotations in quaternion
         # Add Gaussian noise to position and orientation
-        if self.randomize_domain:
-            tcp_pose[:3] = tcp_pose[:3] + np.random.normal(0, position_noise_std, size=3)
-            tcp_pose[3:] = tcp_pose[3:] + np.random.normal(0, orientation_noise_std, size=4)
-            tcp_pose[3:] /= np.linalg.norm(tcp_pose[3:])
+        # if self.randomize_domain:
+        #     tcp_pose[:3] = tcp_pose[:3] + np.random.normal(0, position_noise_std, size=3)
+        #     tcp_pose[3:] = tcp_pose[3:] + np.random.normal(0, orientation_noise_std, size=4)
+        #     tcp_pose[3:] /= np.linalg.norm(tcp_pose[3:])
         
         # Populate noisy observations
         obs["state"]["tcp_pose"] = tcp_pose.astype(np.float32)
@@ -697,134 +698,82 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
         return obs
         
-    # def _compute_reward(self, action):
-    #     block1_pos = self.data.sensor("block1_pos").data
-    #     tcp_pos = self.data.sensor("long_pinch_pos").data
-    #     r_red =  -np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
-
-    #     red_distance = np.linalg.norm(block1_pos - self._block_init)
-    #     green_distance = 0
-    #     for i in self.distractor_displacements:
-    #         green_distance += np.linalg.norm(self.distractor_displacements[i] - self.data.sensor(f"block{i}_pos").data)
-
-    #     total_distance = red_distance + green_distance
-    #     r_dist = -np.tanh(5*np.sum(total_distance))
-
-    #     # Movement rewards
-    #     r_energy = -np.tanh(5*np.linalg.norm(action[:-1]))
-    #     r_smooth = -np.tanh(np.linalg.norm(action[:-1] - self.prev_action[:-1]) )
-    #     self.prev_action = action
-    #     # Gripper Penalty
-    #     if (self.last_gripper_pos > 0.9 and action[-1] > 0.5) or (self.last_gripper_pos < 0.1 and action[-1] < -0.5):
-    #         grasp_penalty = -1.0
-    #     else:
-    #         grasp_penalty = 0.0
-    #     self.last_gripper_pos = 2*self.data.qpos[8]/self._GRIPPER_HOME[0]
-        
-
-    #     # Check if gripper pads are in contact with the object
-    #     right_finger_contact_good = False
-    #     left_finger_contact_good = False
-    #     right_finger_contact_bad = False
-    #     left_finger_contact_bad = False
-    #     good_grasp = False
-    #     bad_grasp = False
-    #     r_green_col = 0
-
-    #     # Check collisions
-    #     for i in range(self.data.ncon):
-    #         geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
-    #         geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
-
-    #         if ("finger" in geom1_name) or ("finger" in geom2_name):
-    #             if ("block" in geom1_name) or (f"block" in geom2_name):
-    #                 r_green_col = -1.0
-
-    #         if geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
-    #             if geom1_name == "stem1" or geom2_name == "stem1":
-    #                 right_finger_contact_good = True
-    #             elif geom1_name == "aG3" or geom2_name == "aG3" or geom1_name == "left_finger_inner" or geom2_name == "left_finger_inner":
-    #                 pass
-    #             else:
-    #                 right_finger_contact_good = False
-    #                 right_finger_contact_bad = True
-    #         if geom1_name =="left_finger_inner" or geom2_name =="left_finger_inner":
-    #             if geom1_name == "stem1" or geom2_name == "stem1":
-    #                 left_finger_contact_good = True
-    #             elif geom1_name == "aG3" or geom2_name == "aG3" or geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
-    #                 pass
-    #             else:
-    #                 left_finger_contact_good = False
-    #                 left_finger_contact_bad = True
-    #         if right_finger_contact_good and left_finger_contact_good:
-    #             good_grasp = True
-    #         if right_finger_contact_bad and left_finger_contact_bad:
-    #             bad_grasp = True
-
-    #     if good_grasp and (np.linalg.norm(self.data.sensor("block1_pos").data - self._block_init) < 0.05):
-    #         r_grasp = 1.0
-    #         success = True
-    #     else:
-    #         r_grasp = 0.0
-    #         success = False
-    #     r_bad_grasp = -float(bad_grasp)
-        
-    #     info = {}
-    #     if self.reward_type == "dense":
-    #         rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth, 'grasp_penalty': grasp_penalty}
-    #         reward_scales = {'r_grasp': 10.0, 'r_red': 4.0, 'r_green_col': 1.0, 'r_dist': 1.0, 'r_bad_grasp': 1.0, 'r_energy': 1.0, 'r_smooth': 1.0, 'grasp_penalty': 1.0}
-    #         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
-    #         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
-    #         info = rewards
-    #     elif self.reward_type == "sparse":
-    #         reward = float(success)
-
-    #     info['success'] = success
-    #     return reward, info
-    
     def _compute_reward(self, action):
-        # 18th Feb reward function
         block1_pos = self.data.sensor("block1_pos").data
         tcp_pos = self.data.sensor("long_pinch_pos").data
-        r_red = 1 - np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
+        r_red =  -np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
 
+        red_distance = np.linalg.norm(block1_pos - self._block_init)
         green_distance = 0
         for i in self.distractor_displacements:
             green_distance += np.linalg.norm(self.distractor_displacements[i] - self.data.sensor(f"block{i}_pos").data)
 
-        r_dist = -np.tanh(5*np.sum(green_distance))
+        total_distance = red_distance + green_distance
+        r_dist = -np.tanh(5*np.sum(total_distance))
 
         # Movement rewards
-        r_energy = -np.linalg.norm(action)
-        r_smooth = -np.linalg.norm(action - self.prev_action) 
+        r_energy = -np.tanh(5*np.linalg.norm(action[:-1]))
+        r_smooth = -np.tanh(np.linalg.norm(action[:-1] - self.prev_action[:-1]) )
         self.prev_action = action
-        
+        # Gripper Penalty
+        if (self.last_gripper_pos > 0.9 and action[-1] > 0.5) or (self.last_gripper_pos < 0.1 and action[-1] < -0.5):
+            grasp_penalty = -1.0
+        else:
+            grasp_penalty = 0.0
+        self.last_gripper_pos = 2*self.data.qpos[8]/self._GRIPPER_HOME[0]
         
 
         # Check if gripper pads are in contact with the object
-        right_finger_contact = False
-        left_finger_contact = False
-        success = False
+        right_finger_contact_good = False
+        left_finger_contact_good = False
+        right_finger_contact_bad = False
+        left_finger_contact_bad = False
+        good_grasp = False
+        bad_grasp = False
+        r_green_col = 0
+
         # Check collisions
         for i in range(self.data.ncon):
             geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
             geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
 
+            if ("finger" in geom1_name) or ("finger" in geom2_name):
+                if ("block" in geom1_name) or (f"block" in geom2_name):
+                    r_green_col = -1.0
+
             if geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
                 if geom1_name == "stem1" or geom2_name == "stem1":
-                    right_finger_contact = True
+                    right_finger_contact_good = True
+                elif geom1_name == "aG3" or geom2_name == "aG3" or geom1_name == "left_finger_inner" or geom2_name == "left_finger_inner":
+                    pass
+                else:
+                    right_finger_contact_good = False
+                    right_finger_contact_bad = True
             if geom1_name =="left_finger_inner" or geom2_name =="left_finger_inner":
                 if geom1_name == "stem1" or geom2_name == "stem1":
-                    left_finger_contact = True
-            if right_finger_contact and left_finger_contact:
-                success=True
-                break 
-        r_grasp = float(success)
+                    left_finger_contact_good = True
+                elif geom1_name == "aG3" or geom2_name == "aG3" or geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
+                    pass
+                else:
+                    left_finger_contact_good = False
+                    left_finger_contact_bad = True
+            if right_finger_contact_good and left_finger_contact_good:
+                good_grasp = True
+            if right_finger_contact_bad and left_finger_contact_bad:
+                bad_grasp = True
+
+        if good_grasp and (np.linalg.norm(self.data.sensor("block1_pos").data - self._block_init) < 0.05):
+            r_grasp = 1.0
+            success = True
+        else:
+            r_grasp = 0.0
+            success = False
+        r_bad_grasp = -float(bad_grasp)
         
         info = {}
         if self.reward_type == "dense":
-            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_dist': r_dist, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_dist': 1.0, 'r_energy': 2.0, 'r_smooth': 1.0}
+            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth, 'grasp_penalty': grasp_penalty}
+            reward_scales = {'r_grasp': 10.0, 'r_red': 4.0, 'r_green_col': 1.0, 'r_dist': 1.0, 'r_bad_grasp': 1.0, 'r_energy': 1.0, 'r_smooth': 1.0, 'grasp_penalty': 1.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards
@@ -833,3 +782,55 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
         info['success'] = success
         return reward, info
+    
+    # def _compute_reward(self, action):
+    #     # 18th Feb reward function
+    #     block1_pos = self.data.sensor("block1_pos").data
+    #     tcp_pos = self.data.sensor("long_pinch_pos").data
+    #     r_red = 1 - np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
+
+    #     green_distance = 0
+    #     for i in self.distractor_displacements:
+    #         green_distance += np.linalg.norm(self.distractor_displacements[i] - self.data.sensor(f"block{i}_pos").data)
+
+    #     r_dist = 1 - np.tanh(5*np.sum(green_distance))
+
+    #     # Movement rewards
+    #     r_energy = -np.linalg.norm(action)
+    #     r_smooth = -np.linalg.norm(action - self.prev_action) 
+    #     self.prev_action = action
+        
+        
+
+    #     # Check if gripper pads are in contact with the object
+    #     right_finger_contact = False
+    #     left_finger_contact = False
+    #     success = False
+    #     # Check collisions
+    #     for i in range(self.data.ncon):
+    #         geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
+    #         geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
+
+    #         if geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
+    #             if geom1_name == "stem1" or geom2_name == "stem1":
+    #                 right_finger_contact = True
+    #         if geom1_name =="left_finger_inner" or geom2_name =="left_finger_inner":
+    #             if geom1_name == "stem1" or geom2_name == "stem1":
+    #                 left_finger_contact = True
+    #         if right_finger_contact and left_finger_contact:
+    #             success=True
+    #             break 
+    #     r_grasp = float(success)
+        
+    #     info = {}
+    #     if self.reward_type == "dense":
+    #         rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_dist': r_dist, 'r_energy': r_energy, 'r_smooth': r_smooth}
+    #         reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_dist': 1.0, 'r_energy': 2.0, 'r_smooth': 1.0}
+    #         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
+    #         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
+    #         info = rewards
+    #     elif self.reward_type == "sparse":
+    #         reward = float(success)
+
+    #     info['success'] = success
+    #     return reward, info
