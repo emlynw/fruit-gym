@@ -14,10 +14,11 @@ class VideoRecorder(gym.Wrapper):
         save_dir,
         crop_resolution,
         resize_resolution,
-        camera_name="wrist2",
+        camera_name="wrist1",
         fps=10,
         current_episode=0,
         record_every=2,
+        write_reward=False,
     ):
         super().__init__(env)
 
@@ -39,6 +40,7 @@ class VideoRecorder(gym.Wrapper):
         self.enabled = True
         self.current_episode = current_episode
         self.record_every = record_every
+        self.write_reward = write_reward
         self.frames = []
 
     def step(self, action):
@@ -62,16 +64,17 @@ class VideoRecorder(gym.Wrapper):
                         interpolation=cv2.INTER_CUBIC,
                     )
             frame  = np.ascontiguousarray(frame)
-            # cv2.putText(
-            #     frame,
-            #     f"{reward:.3f}",
-            #     (10, 40),
-            #     cv2.FONT_HERSHEY_SIMPLEX,
-            #     0.5,
-            #     (0, 255, 0),
-            #     1,
-            #     cv2.LINE_AA,
-            # )
+            if self.write_reward:
+                cv2.putText(
+                    frame,
+                    f"{reward:.3f}",
+                    (10, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    1,
+                    cv2.LINE_AA,
+                )
 
             self.frames.append(frame)
 
