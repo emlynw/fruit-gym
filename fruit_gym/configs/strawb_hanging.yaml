@@ -51,10 +51,10 @@ domain_randomization:
 
   objects:
     enabled: true
-    num_green: 7
+    num_green: 3
     random_count: True
     random_size: False
-    target_pos_noise_low: [-0.02, -0.1, -0.1]
-    target_pos_noise_high: [0.08, 0.1, 0.08]
+    target_pos_noise_low: [-0.02, -0.02, -0.02]
+    target_pos_noise_high: [0.02, 0.02, 0.02]
     distract_pos_noise_low: [-0.06, -0.03, -0.05]
     distract_pos_noise_high: [0.03, 0.03, 0.05]

@@ -293,7 +293,12 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
         target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
-        target_pos = self.default_obj_pos + target_pos_noise
+        # target_pos = self.default_obj_pos + target_pos_noise
+        # self.model.body_pos[self.model.body("vine1").id] = target_pos
+        target_pos = self.data.mocap_pos[0].copy()
+        target_pos[0] = target_pos[0] + 0.2
+        target_pos[2] = target_pos[2] + 0.1
+        target_pos = target_pos + target_pos_noise
         self.model.body_pos[self.model.body("vine1").id] = target_pos
         # Target orientation
         random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)  # Random angle in radians
@@ -337,7 +342,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
         distractor_indices = list(range(2, self.num_green + 2))
         if object_cfg.get("random_count"):
-            active_count = np.random.randint(1, len(distractor_indices) + 1)
+            active_count = np.random.randint(1, num_green + 1)
         else:
             active_count = num_green
         active_indices = np.random.choice(distractor_indices, size=active_count, replace=False)
