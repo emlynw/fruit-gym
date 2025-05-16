@@ -814,7 +814,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         r_grasp = 0.0
         r_bad_grasp = -float(bad_grasp)
-        if good_grasp:
+        if good_grasp and (not bad_grasp):
             # Look for the red stem index that was contacted.
             curr_pos = self.data.sensor(f"block{grasped_idx}_pos").data
             init_pos = self.red_positions[grasped_idx]
@@ -853,7 +853,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         info = {}
         if self.reward_type == "dense":
             rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_col': r_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_col': 0.0, 'r_dist': 1.0, 'r_bad_grasp': 0.0, 'r_energy': 2.0 , 'r_smooth': 1.0}
+            reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_col': 0.5, 'r_dist': 1.0, 'r_bad_grasp': 0.0, 'r_energy': 2.0 , 'r_smooth': 1.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards
