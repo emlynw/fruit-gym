@@ -215,12 +215,12 @@
     <mesh name="strawberry" file="strawberry.obj" scale="0.12 0.12 0.12"/>
     <mesh name="strawberry_leaves" file="strawberry_leaves.obj" scale="0.12 0.12 0.12"/>
     <mesh name="strawberry_collision" file="strawberry_collision.obj" scale="0.12 0.12 0.12"/>
-    <mesh name="strawberry_big" file="strawberry.obj" scale="0.15 0.15 0.15"/>
-    <mesh name="strawberry_leaves_big" file="strawberry_leaves.obj" scale="0.15 0.15 0.15"/>
-    <mesh name="strawberry_collision_big" file="strawberry_collision.obj" scale="0.15 0.15 0.15"/>
-    <mesh name="strawberry_small" file="strawberry.obj" scale="0.1 0.1 0.1"/>
-    <mesh name="strawberry_leaves_small" file="strawberry_leaves.obj" scale="0.1 0.1 0.1"/>
-    <mesh name="strawberry_collision_small" file="strawberry_collision.obj" scale="0.1 0.1 0.1"/>
+    <mesh name="strawberry_big" file="strawberry.obj" scale="0.13 0.13 0.13"/>
+    <mesh name="strawberry_leaves_big" file="strawberry_leaves.obj" scale="0.13 0.13 0.13"/>
+    <mesh name="strawberry_collision_big" file="strawberry_collision.obj" scale="0.13 0.13 0.13"/>
+    <mesh name="strawberry_small" file="strawberry.obj" scale="0.11 0.11 0.11"/>
+    <mesh name="strawberry_leaves_small" file="strawberry_leaves.obj" scale="0.11 0.11 0.11"/>
+    <mesh name="strawberry_collision_small" file="strawberry_collision.obj" scale="0.11 0.11 0.11"/>
     <mesh name="strawberry2" file="strawberry_new.obj" scale="0.006 0.006 0.006"/>
     <mesh name="strawberry2_collision" file="strawberry2_collision.obj" scale="0.006 0.006 0.006"/>
   </asset>
@@ -446,12 +446,12 @@
                   <geom name="block1_visual" type="mesh" mesh="strawberry" material="strawberry_material" contype="0" conaffinity="0"/>
                   <geom name="leaves1" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block1_big" pos="0 -0.0082 0">
+                <body name="block1_big" pos="0 -0.003 0">
                   <geom name="block1_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block1_big_visual" type="mesh" mesh="strawberry_big" material="strawberry_material" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves1_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block1_small" pos="0 0.007 0">
+                <body name="block1_small" pos="0 0.003 0">
                   <geom name="block1_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block1_small_visual" type="mesh" mesh="strawberry_small" material="strawberry_material" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves1_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
@@ -487,12 +487,12 @@
                   <geom name="block2_visual" type="mesh" mesh="strawberry" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0"/>
                   <geom name="leaves2" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block2_big" pos="0 -0.0082 0">
+                <body name="block2_big" pos="0 -0.03 0">
                   <geom name="block2_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block2_big_visual" type="mesh" mesh="strawberry_big" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves2_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block2_small" pos="0 0.007 0">
+                <body name="block2_small" pos="0 0.003 0">
                   <geom name="block2_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block2_small_visual" type="mesh" mesh="strawberry_small" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves2_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
@@ -529,12 +529,12 @@
                   <geom name="block3_visual" type="mesh" mesh="strawberry" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0"/>
                   <geom name="leaves3" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block3_big" pos="0 -0.0082 0">
+                <body name="block3_big" pos="0 -0.03 0">
                   <geom name="block3_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block3_big_visual" type="mesh" mesh="strawberry_big" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves3_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block3_small" pos="0 0.007 0">
+                <body name="block3_small" pos="0 0.003 0">
                   <geom name="block3_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block3_small_visual" type="mesh" mesh="strawberry_small" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves3_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
@@ -571,12 +571,12 @@
                   <geom name="block4_visual" type="mesh" mesh="strawberry" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0"/>
                   <geom name="leaves4" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block4_big" pos="0 -0.0082 0">
+                <body name="block4_big" pos="0 -0.03 0">
                   <geom name="block4_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block4_big_visual" type="mesh" mesh="strawberry_big" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves4_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block4_small" pos="0 0.007 0">
+                <body name="block4_small" pos="0 0.003 0">
                   <geom name="block4_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block4_small_visual" type="mesh" mesh="strawberry_small" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves4_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
@@ -613,12 +613,12 @@
                   <geom name="block5_visual" type="mesh" mesh="strawberry" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0"/>
                   <geom name="leaves5" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block5_big" pos="0 -0.0082 0">
+                <body name="block5_big" pos="0 -0.03 0">
                   <geom name="block5_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block5_big_visual" type="mesh" mesh="strawberry_big" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves5_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block5_small" pos="0 0.007 0">
+                <body name="block5_small" pos="0 0.003 0">
                   <geom name="block5_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block5_small_visual" type="mesh" mesh="strawberry_small" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves5_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
@@ -655,12 +655,12 @@
                   <geom name="block6_visual" type="mesh" mesh="strawberry" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0"/>
                   <geom name="leaves6" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block6_big" pos="0 -0.0082 0">
+                <body name="block6_big" pos="0 -0.03 0">
                   <geom name="block6_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block6_big_visual" type="mesh" mesh="strawberry_big" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves6_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block6_small" pos="0 0.007 0">
+                <body name="block6_small" pos="0 0.003 0">
                   <geom name="block6_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block6_small_visual" type="mesh" mesh="strawberry_small" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves6_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
@@ -697,12 +697,12 @@
                   <geom name="block7_visual" type="mesh" mesh="strawberry" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0"/>
                   <geom name="leaves7" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block7_big" pos="0 -0.0082 0">
+                <body name="block7_big" pos="0 -0.03 0">
                   <geom name="block7_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block7_big_visual" type="mesh" mesh="strawberry_big" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves7_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block7_small" pos="0 0.007 0">
+                <body name="block7_small" pos="0 0.003 0">
                   <geom name="block7_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block7_small_visual" type="mesh" mesh="strawberry_small" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves7_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
@@ -739,12 +739,12 @@
                   <geom name="block8_visual" type="mesh" mesh="strawberry" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0"/>
                   <geom name="leaves8" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
                 </body>
-                <body name="block8_big" pos="0 -0.0082 0">
+                <body name="block8_big" pos="0 -0.03 0">
                   <geom name="block8_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
                   <geom name="block8_big_visual" type="mesh" mesh="strawberry_big" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves8_big" type="mesh" mesh="strawberry_leaves_big" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
                 </body>
-                <body name="block8_small" pos="0 0.007 0">
+                <body name="block8_small" pos="0 0.003 0">
                   <geom name="block8_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
                   <geom name="block8_small_visual" type="mesh" mesh="strawberry_small" rgba="0.5 0.63 0.45 1" contype="0" conaffinity="0" group="3"/>
                   <geom name="leaves8_small" type="mesh" mesh="strawberry_leaves_small" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0" group="3"/>
