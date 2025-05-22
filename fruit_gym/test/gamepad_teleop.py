@@ -46,16 +46,18 @@ def main():
 
         while not terminated and not truncated:
             step_start_time = time.time()
-            for camera in cameras:
-                frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
-                cv2.imshow(camera, frame)
-                cv2.waitKey(waitkey)
-
             action = np.zeros_like(env.action_space.sample())
             if "intervene_action" in info:
                 action = info['intervene_action']
 
             obs, reward, terminated, truncated, info = env.step(action)
+            for camera in cameras:
+                frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
+                # Write reward on the frame
+                cv2.putText(frame, f"Reward: {reward:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.imshow(camera, frame)
+                cv2.waitKey(waitkey)
+
             step_time = time.time() - step_start_time
             if step_time < 0.05:
                 time.sleep(0.05 - step_time)

@@ -143,8 +143,8 @@
     <mesh name="link7_c" file="link7.stl"/>
     <mesh name="camera_mount_c" file="camera_mount_collision_straight.stl"/>
     <mesh name="hand_c" file="hand.stl"/>
-    <mesh name="gripper_long_inner" file="gripper_long_inner.stl"/>
-    <mesh name="gripper_long_outer" file="gripper_long_outer.stl"/>
+    <mesh name="gripper_long_inner" file="gripper_long_inner_new.stl"/>
+    <mesh name="gripper_long_outer" file="gripper_long_outer_new.stl"/>
     <mesh name="gripper_long" file="gripper_long.stl"/>
     <mesh name="link0_0" file="link0_0.obj"/>
     <mesh name="link0_1" file="link0_1.obj"/>
@@ -364,7 +364,7 @@
                         <body name="pinch" pos="0 0 0.105">
                           <site name="pinch" pos="0 0 0" size="0.01" group="3" rgba="1 0 0 1"/>
                         </body>
-                        <body name="long_pinch" pos="0 0 0.15">
+                        <body name="long_pinch" pos="0 0 0.135">
                           <site name="long_pinch" pos="0 0 0" size="0.01" group="3" rgba="1 0 0 1"/>
                         </body>
                         <body name="left_finger" pos="0 0 0.0584">
@@ -837,8 +837,16 @@
     <framepos objtype="site" objname="long_pinch" name="long_pinch_pos"/>
     <framequat objtype="site" objname="long_pinch" name="long_pinch_quat"/>
     <framelinvel objtype="site" objname="long_pinch" name="long_pinch_vel"/>
-    <framepos objtype="site" objname="stem1_grasp" name="block1_pos"/>
     <framequat objtype="geom" objname="block1" name="block_quat"/>
+    <framepos objtype="site" objname="stem1_grasp" name="stem1_pos"/>
+    <framepos objtype="site" objname="stem2_grasp" name="stem2_pos"/>
+    <framepos objtype="site" objname="stem3_grasp" name="stem3_pos"/>
+    <framepos objtype="site" objname="stem4_grasp" name="stem4_pos"/>
+    <framepos objtype="site" objname="stem5_grasp" name="stem5_pos"/>
+    <framepos objtype="site" objname="stem6_grasp" name="stem6_pos"/>
+    <framepos objtype="site" objname="stem7_grasp" name="stem7_pos"/>
+    <framepos objtype="site" objname="stem8_grasp" name="stem8_pos"/>
+    <framepos objtype="body" objname="block1" name="block1_pos"/>
     <framepos objtype="body" objname="block2" name="block2_pos"/>
     <framepos objtype="body" objname="block3" name="block3_pos"/>
     <framepos objtype="body" objname="block4" name="block4_pos"/>

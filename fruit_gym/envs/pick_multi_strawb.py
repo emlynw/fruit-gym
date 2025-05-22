@@ -719,15 +719,16 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self._viewer.render(self.render_mode)
 
         return obs
-        
+    
     def _compute_reward(self, action):
+        # 16th May 21st may runs on lab PC + Gemini suggestions
         tcp_pos = self.data.sensor("long_pinch_pos").data
 
         # Positive reward for moving towards closest red strawb
         if len(self.red_blocks) > 0:
             dists = []
             for red_idx in self.red_blocks:
-                curr_pos = self.data.sensor(f"block{red_idx}_pos").data
+                curr_pos = self.data.sensor(f"stem{red_idx}_pos").data
                 dist = np.linalg.norm(curr_pos - tcp_pos)
                 dists.append(dist)
             min_red_dist = min(dists)
@@ -759,8 +760,17 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         bad_grasp = False
         r_col = 0
         allowed_prefixes = []
+
+        # Allow gripper to contact the next body above the stem
         for i in self.red_blocks:
-            allowed_prefixes.append(f"aG{chr(ord('`')+i)}")
+            allowed_prefixes.append(f"{chr(ord('`')+i)}G3")
+
+        # Reward for attempting to close gripper when very close to a red strawberry
+        r_attempt_close = 0.0
+        GRASP_ATTEMPT_DISTANCE_THRESHOLD = 0.03 # meters (3cm)
+        if np.array_equal(self.gripper_vec, self.gripper_dict["closing"]): # Gripper is currently executing a close action
+            if min_red_dist < GRASP_ATTEMPT_DISTANCE_THRESHOLD:
+                r_attempt_close = 1.0 # Positive reinforcement for trying to close at the right spot
 
         for i in range(self.data.ncon):
             geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
@@ -844,7 +854,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 if grasped_idx in self.red_blocks:
                     self.red_blocks.remove(grasped_idx)        
             else:
-                r_grasp = 0.0    
+                r_grasp = 0.0   
+
+        # Penalty for being alive
+        r_alive = -1.0 
         
         if len(self.red_blocks) == 0:
             completed = True
@@ -852,8 +865,24 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             completed = False
         info = {}
         if self.reward_type == "dense":
-            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_col': r_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_col': 0.5, 'r_dist': 1.0, 'r_bad_grasp': 0.0, 'r_energy': 2.0 , 'r_smooth': 1.0}
+            rewards = {'r_grasp': r_grasp, 
+                       'r_red': r_red, 
+                       'r_col': r_col, 
+                       'r_dist': r_dist, 
+                       'r_attempt_close': r_attempt_close, 
+                       'r_bad_grasp': r_bad_grasp, 
+                       'r_energy': r_energy, 
+                       'r_smooth': r_smooth,
+                       'r_alive': r_alive}
+            reward_scales = {'r_grasp': 25.0, 
+                             'r_red': 2.0, 
+                             'r_col': 0.5, 
+                             'r_dist': 1.0, 
+                             'r_attempt_close': 1.0, 
+                             'r_bad_grasp': 0.0, 
+                             'r_energy': 1.0 , 
+                             'r_smooth': 1.0,
+                             'r_alive': 3.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards
@@ -862,6 +891,151 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         info['success'] = completed
         return reward, info
+    
+        
+    # def _compute_reward(self, action):
+    #     # 16th May 21st may runs on lab PC with sd_vae
+    #     tcp_pos = self.data.sensor("long_pinch_pos").data
+
+    #     # Positive reward for moving towards closest red strawb
+    #     if len(self.red_blocks) > 0:
+    #         dists = []
+    #         for red_idx in self.red_blocks:
+    #             curr_pos = self.data.sensor(f"block{red_idx}_pos").data
+    #             dist = np.linalg.norm(curr_pos - tcp_pos)
+    #             dists.append(dist)
+    #         min_red_dist = min(dists)
+    #         r_red = 1 - np.tanh(5 * min_red_dist)
+    #     else:
+    #         r_red = 0.0
+
+    #     red_distance = 0
+    #     green_distance = 0
+    #     for i in self.red_blocks:
+    #         red_distance += np.linalg.norm(self.data.sensor(f"block{i}_pos").data - self.red_positions[i])
+    #     for j in self.green_blocks:
+    #         green_distance += np.linalg.norm(self.data.sensor(f"block{j}_pos").data - self.green_positions[j])
+    #     total_distance = red_distance + green_distance
+    #     r_dist = 1 - np.tanh(5 * total_distance)
+
+    #     # Penalize large actions an large changes in actions (reduce shakiness)
+    #     r_energy = -np.linalg.norm(action)
+    #     r_smooth = -np.linalg.norm(action - self.prev_action) 
+    #     self.prev_action = action
+
+    #     # Check if gripper pads are in contact with the object
+    #     grasped_idx = None
+    #     right_finger_contact_good = False
+    #     left_finger_contact_good = False
+    #     right_finger_contact_bad = False
+    #     left_finger_contact_bad = False
+    #     good_grasp = False
+    #     bad_grasp = False
+    #     r_col = 0
+    #     allowed_prefixes = []
+    #     for i in self.red_blocks:
+    #         allowed_prefixes.append(f"aG{chr(ord('`')+i)}")
+
+    #     for i in range(self.data.ncon):
+    #         geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
+    #         geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
+
+    #         if ("finger" in geom1_name) or ("finger" in geom2_name):
+    #             if ("block" in geom1_name) or (f"block" in geom2_name):
+    #                 r_col = -1.0
+
+    #         if "right_finger_inner" in (geom1_name, geom2_name):
+    #             # Identify the other geom.
+    #             other = geom1_name if geom2_name == "right_finger_inner" else geom2_name
+    #             # Check if its name starts with an allowed prefix and its numeric part is desired.
+    #             if other.startswith("stem"):
+    #                 num_part = other[len("stem"):]
+    #                 try:
+    #                     stem_idx = int(num_part)
+    #                     if stem_idx in self.red_blocks:
+    #                         right_finger_contact_good = True
+    #                         grasped_idx = stem_idx
+    #                 except ValueError:
+    #                     pass  # not a valid integer, skip
+    #             elif other in allowed_prefixes or other =="left_finger_inner":
+    #                 pass
+    #             else:
+    #                 right_finger_contact_good = False
+    #                 right_finger_contact_bad = True
+    #                 stem_idx = None
+
+    #         if "left_finger_inner" in (geom1_name, geom2_name):
+    #             other = geom1_name if geom2_name == "left_finger_inner" else geom2_name
+    #             if other.startswith("stem"):
+    #                 num_part = other[len("stem"):]
+    #                 try:
+    #                     stem_idx = int(num_part)
+    #                     if stem_idx in self.red_blocks:
+    #                         left_finger_contact_good = True
+    #                 except ValueError:
+    #                     pass
+    #             elif other in allowed_prefixes or other =="left_finger_inner":
+    #                 pass
+    #             else:
+    #                 left_finger_contact_good = False
+    #                 left_finger_contact_bad = True
+    #                 stem_idx = None
+
+    #         if right_finger_contact_good and left_finger_contact_good:
+    #             good_grasp=True
+    #         if right_finger_contact_bad and left_finger_contact_bad:
+    #             bad_grasp = True
+
+    #     r_grasp = 0.0
+    #     r_bad_grasp = -float(bad_grasp)
+    #     if good_grasp and (not bad_grasp):
+    #         # Look for the red stem index that was contacted.
+    #         curr_pos = self.data.sensor(f"block{grasped_idx}_pos").data
+    #         init_pos = self.red_positions[grasped_idx]
+    #         dist_from_init = np.linalg.norm(curr_pos - init_pos)
+    #         if dist_from_init < 0.05 and grasped_idx is not None:
+    #             r_grasp = 1.0
+    #             # Make the strawberry invisible by updating its geoms.
+    #             # We assume its associated bodies are "blockX", "blockX_big", "blockX_small".
+    #             for suffix in ["", "_big", "_small"]:
+    #                 body_name = f"block{grasped_idx}{suffix}"
+    #                 try:
+    #                     body = self.model.body(body_name)
+    #                 except Exception:
+    #                     continue
+    #                 geom_start = self.model.body_geomadr[body.id]
+    #                 geom_count = self.model.body_geomnum[body.id]
+    #                 for i in range(geom_count):
+    #                     geom_id = geom_start + i
+    #                     # Set visual group to 3, and disable collision.
+    #                     self.model.geom_group[geom_id] = 3
+    #                     self.model.geom_contype[geom_id] = 0
+    #                     self.model.geom_conaffinity[geom_id] = 0
+
+    #             # Remove the grasped strawberry from active lists.
+    #             if grasped_idx in self.active_indices:
+    #                 self.active_indices = np.delete(self.active_indices, np.where(self.active_indices == grasped_idx))
+    #             if grasped_idx in self.red_blocks:
+    #                 self.red_blocks.remove(grasped_idx)        
+    #         else:
+    #             r_grasp = 0.0    
+        
+    #     if len(self.red_blocks) == 0:
+    #         completed = True
+    #     else:
+    #         completed = False
+    #     info = {}
+    #     if self.reward_type == "dense":
+    #         rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_col': r_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth}
+    #         reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_col': 0.5, 'r_dist': 1.0, 'r_bad_grasp': 0.0, 'r_energy': 2.0 , 'r_smooth': 1.0}
+    #         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
+    #         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
+    #         info = rewards
+    #     elif self.reward_type == "sparse":
+    #         reward = float(completed)
+
+    #     info['success'] = completed
+    #     return reward, info
         
     # def _compute_reward(self, action):
     #     tcp_pos = self.data.sensor("long_pinch_pos").data
