@@ -5,11 +5,11 @@
     <flag multiccd="enable"/>
   </option>
 
-  <size memory="100M"/>
+  <size memory="80M"/>
 
   <visual>
     <global azimuth="120" elevation="-20"/>
-    <quality shadowsize="8192"/>
+    <quality shadowsize="2048"/>
     <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
     <rgba haze="0.15 0.25 0.35 1"/>
   </visual>
@@ -405,9 +405,9 @@
     <!-- <body name="front" pos="2.0 0 0.6" quat="0.536456 0.460733 0.4611 0.536029">
       <camera name="front" pos="0 0 0" fovy="41"/>
     </body> -->
-    <body name="side" pos="-0.151 -3.348 0.778" xyaxes="0.998 -0.056 -0.000 -0.001 -0.017 1.000"> 
+    <!-- <body name="side" pos="-0.151 -3.348 0.778" xyaxes="0.998 -0.056 -0.000 -0.001 -0.017 1.000"> 
       <camera name="side" pos="0 0 0" fovy="41"/>
-    </body>
+    </body> -->
     <body name="light0" pos="0.3 0 1.6">
       <light pos="0 0 0" dir="0 0 -1" ambient="0.1 0.1 0.1" diffuse="0.2 0.2 0.2"/>
     </body>
@@ -809,7 +809,7 @@
   </actuator>
 
   <sensor>
-    <jointpos joint="joint1" name="panda/joint1_pos"/>
+    <!-- <jointpos joint="joint1" name="panda/joint1_pos"/>
     <jointpos joint="joint2" name="panda/joint2_pos"/>
     <jointpos joint="joint3" name="panda/joint3_pos"/>
     <jointpos joint="joint4" name="panda/joint4_pos"/>
@@ -829,7 +829,7 @@
     <torque site="joint4" name="panda/joint4_torque"/>
     <torque site="joint5" name="panda/joint5_torque"/>
     <torque site="joint6" name="panda/joint6_torque"/>
-    <torque site="joint7" name="panda/joint7_torque"/>
+    <torque site="joint7" name="panda/joint7_torque"/> -->
     <force site="attachment_site" name="panda/wrist_force"/>
     <framepos objtype="site" objname="pinch" name="pinch_pos"/>
     <framequat objtype="site" objname="pinch" name="pinch_quat"/>
