@@ -1,4 +1,5 @@
 __pycache__/
 *.egg-info/
 *.mp4
+devel/
 MUJOCO_LOG.TXT
