@@ -20,7 +20,7 @@ def main():
     camera_res = 480
     video_res = 480
     cameras = ['wrist1', 'wrist2']
-    proprio_keys = ["tcp_pose", "gripper_pos"]
+    proprio_keys = None
     display_res = (640, 640)
     fps = 20  # Frames per second for video recording
     num_episodes = 10
@@ -28,7 +28,7 @@ def main():
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
 
-    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=False)
+    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, include_priveleged_obs=True, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=False)
     env = TimeLimit(env, max_episode_steps=500)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
@@ -57,10 +57,6 @@ def main():
         
         while not (terminated or truncated):
             step_start_time = time.time()
-            # Display the environment
-            for camera in cameras:
-                frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
-                cv2.imshow(camera, frame)
             
             # Calculate movement based on absolute mouse position within window
             move_left_right = ((mouse_x / display_res[0]) * 2 - 1) * max_speed
@@ -90,8 +86,14 @@ def main():
             if step_time < waitkey/1000:
                 time.sleep(waitkey/1000 - step_time)
             obs, reward, terminated, truncated, info = env.step(move_action)
-            print(f"reward: {reward}")
-
+            print(f"obs state shape: {obs['state'].shape}")
+            # Display the environment
+            for camera in cameras:
+                frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
+                # Write reward on the frame
+                cv2.putText(frame, f"Reward: {reward:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.imshow(camera, frame)
+                
             # Reset environment on 'R' key press
             if key == ord('r'):
                 print("Resetting environment...")

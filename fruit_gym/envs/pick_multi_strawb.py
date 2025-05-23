@@ -137,6 +137,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
     def __init__(
         self,
         image_obs: bool = True,
+        include_priveleged_obs: bool = False,
         randomize_domain: bool = True,
         ee_dof: int = 6, # 3 for position, 3 for orientation
         control_dt: float = 0.05,
@@ -158,6 +159,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             cameras = ["wrist1", "wrist2", "front"]
 
         self.image_obs = image_obs
+        self.include_priveleged_obs = include_priveleged_obs
         self.randomize_domain = randomize_domain
         self.ee_dof = ee_dof
         self.render_mode = render_mode
@@ -178,22 +180,47 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.85])
         self.gripper_sleep = 0.6
+        MAX_OBSERVABLE_STRAWBERRIES = 8
 
         if config_path is None:
             config_path = Path(__file__).parent.parent / "configs" / "strawb_hanging.yaml"
         self.cfg = load_config(config_path)
 
-        state_space = Dict(
-            {
-                "tcp_pose": Box(-np.inf, np.inf, shape=(7,), dtype=np.float32),
-                "tcp_vel": Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
-                "gripper_pos": Box(-1, 1, shape=(1,), dtype=np.float32),
-                "gripper_vec": Box(0.0, 1.0, shape=(4,), dtype=np.float32),
-            }
-        )
-        if not image_obs:
-            state_space["block_pos"] = Box(-np.inf, np.inf, shape=(3,), dtype=np.float32)
-        self.observation_space = Dict({"state": state_space})
+        # Define the basic state space components
+        state_space_dict = {
+            "tcp_pose": Box(-np.inf, np.inf, shape=(7,), dtype=np.float32), # 3 pos, 4 quat (xyzw)
+            "tcp_vel": Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
+            "gripper_pos": Box(-1, 1, shape=(1,), dtype=np.float32),
+            "gripper_vec": Box(0.0, 1.0, shape=(4,), dtype=np.float32),
+        }
+
+        if not image_obs or include_priveleged_obs:
+            # Add detailed strawberry information if not using image observations
+            state_space_dict["all_red_pos_relative"] = Box(
+                -np.inf, np.inf, shape=(MAX_OBSERVABLE_STRAWBERRIES, 3), dtype=np.float32
+            )
+            state_space_dict["all_red_distances"] = Box(
+                0, np.inf, shape=(MAX_OBSERVABLE_STRAWBERRIES,), dtype=np.float32
+            )
+            state_space_dict["all_red_mask"] = Box(
+                0.0, 1.0, shape=(MAX_OBSERVABLE_STRAWBERRIES,), dtype=np.float32
+            )
+            state_space_dict["all_green_pos_relative"] = Box(
+                -np.inf, np.inf, shape=(MAX_OBSERVABLE_STRAWBERRIES, 3), dtype=np.float32
+            )
+            state_space_dict["all_green_distances"] = Box(
+                0, np.inf, shape=(MAX_OBSERVABLE_STRAWBERRIES,), dtype=np.float32
+            )
+            state_space_dict["all_green_mask"] = Box(
+                0.0, 1.0, shape=(MAX_OBSERVABLE_STRAWBERRIES,), dtype=np.float32
+            )
+            state_space_dict["num_red_left"] = Box(
+                0, MAX_OBSERVABLE_STRAWBERRIES, shape=(1,), dtype=np.float32
+            )
+            # The old "block_pos" is removed as its info is now in the sorted list.
+
+        self.observation_space = Dict({"state": Dict(state_space_dict)})
+        
         if image_obs:
             self.observation_space["images"] = Dict()
             for camera in self.cameras:
@@ -289,11 +316,45 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self.model.body_pos[self.model.body(f"vine{i}").id] = self.default_obj_pos + np.array([-0.05, 0.0, 0.0])
         self.active_indices = np.array(list(range(2, self.num_green + 2)))
 
+    def _set_inactive_properties_recursive(self, body_id: int):
+        """
+        Recursively sets geoms under body_id to group 3 
+        and makes them non-collidable, as per the user's preferred method.
+        """
+        # Process geoms of the current body
+        geom_start = self.model.body_geomadr[body_id]
+        geom_count = self.model.body_geomnum[body_id]
+        for k in range(geom_count):
+            geom_id = geom_start + k
+            self.model.geom_group[geom_id] = 3  # Assign to group 3
+            self.model.geom_contype[geom_id] = 0
+            self.model.geom_conaffinity[geom_id] = 0
+        
+        # Recurse for children
+        for child_body_id in range(self.model.nbody):
+            if self.model.body_parentid[child_body_id] == body_id:
+                self._set_inactive_properties_recursive(child_body_id)
+
     def object_noise(self):
         dr = self.cfg.get("domain_randomization", {})
         object_cfg = dr.get("objects", {})
         if not object_cfg.get("enabled", False):
             return
+        
+          # --- Store initial geom properties once, then restore them each call ---
+        if not hasattr(self, '_initial_geom_properties_stored'):
+            self._initial_geom_rgba = self.model.geom_rgba.copy()
+            self._initial_geom_contype = self.model.geom_contype.copy()
+            self._initial_geom_conaffinity = self.model.geom_conaffinity.copy()
+            self._initial_geom_group = self.model.geom_group.copy() # Store initial groups
+            self._initial_geom_properties_stored = True
+        
+        # Restore all geoms to their original XML-defined state
+        self.model.geom_rgba[:] = self._initial_geom_rgba
+        self.model.geom_contype[:] = self._initial_geom_contype
+        self.model.geom_conaffinity[:] = self._initial_geom_conaffinity
+        self.model.geom_group[:] = self._initial_geom_group # Restore initial groups
+
         # Target pos
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
@@ -350,6 +411,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.active_indices = active_indices
 
         for i in distractor_indices:
+            vine_body_name = f"vine{i}"
+            vine_body_id = self.model.body(vine_body_name).id
             # Randomize the distractor vine's position.
             distract_pos_noise = np.random.uniform(low=distract_pos_noise_low,
                                                     high=distract_pos_noise_high,
@@ -376,11 +439,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
             # If this vine is NOT active, disable its collisions.
             if i not in active_indices:
-                for name in sub_names:
-                    for geom_id in sub_geom_ids[name]:
-                        self.model.geom_group[geom_id] = 3
-                        self.model.geom_contype[geom_id] = 0
-                        self.model.geom_conaffinity[geom_id] = 0
+                if object_cfg.get("hide_inactive_vines", True):
+                    self._set_inactive_properties_recursive(vine_body_id)
+                else:
+                    for name in sub_names:
+                        for geom_id in sub_geom_ids[name]:
+                            self.model.geom_group[geom_id] = 3
+                            self.model.geom_contype[geom_id] = 0
+                            self.model.geom_conaffinity[geom_id] = 0
             else:
                 # Otherwise, ensure default collision settings are in place.
                 if np.random.rand() < 0.25:
@@ -689,31 +755,113 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
     def _get_obs(self):
         obs = {"state": {}}
         
-        # Original position and orientation observations
-        tcp_pose = np.concatenate([self.data.sensor("pinch_pos").data, 
-                                  np.roll(self.data.sensor("pinch_quat").data, -1)])
-        # Define noise parameters
-        position_noise_std = self.cfg.get("ee_pos_noise", 0.01)  # e.g., 1 cm standard deviation
-        orientation_noise_std = self.cfg.get("ee_ori_noise", 0.005)  # e.g., small rotations in quaternion
-        # Add Gaussian noise to position and orientation
-        if self.randomize_domain:
-            tcp_pose[:3] = tcp_pose[:3] + np.random.normal(0, position_noise_std, size=3)
-            tcp_pose[3:] = tcp_pose[3:] + np.random.normal(0, orientation_noise_std, size=4)
-            tcp_pose[3:] /= np.linalg.norm(tcp_pose[3:])
+        # --- TCP pose and velocity ---
+        tcp_world_pos = self.data.sensor("pinch_pos").data.copy()
+        # Ensure quaternion is in xyzw order for Rotation, then back to wxyz if needed by convention elsewhere
+        # MuJoCo sensors output wxyz, np.roll(q, -1) makes it xyzw
+        tcp_world_quat_xyzw = np.roll(self.data.sensor("pinch_quat").data, -1).copy() 
         
-        # Populate observations
-        obs["state"]["tcp_pose"] = tcp_pose.astype(np.float32)
-        obs["state"]["tcp_vel"] = self._get_vel()
-        obs["state"]["gripper_pos"] = np.array([2*self.data.qpos[8]/self._GRIPPER_HOME[0]], dtype=np.float32)
-        obs["state"]["gripper_vec"] = self.gripper_vec
+        if self.randomize_domain:
+            # Noise for position
+            # Use a default from cfg or a fallback value
+            position_noise_std = self.cfg.get("domain_randomization", {}).get("ee_pos_noise_std", 0.005) 
+            tcp_world_pos += np.random.normal(0, position_noise_std, size=3)
+            
+            # Noise for orientation
+            orientation_noise_std = self.cfg.get("domain_randomization", {}).get("ee_ori_noise_std", 0.005)
+            orientation_noise_axis_angle = np.random.normal(0, orientation_noise_std, size=3)
+            small_rotation = Rotation.from_rotvec(orientation_noise_axis_angle)
+            current_rotation = Rotation.from_quat(tcp_world_quat_xyzw) # Expects xyzw
+            new_rotation = small_rotation * current_rotation
+            tcp_world_quat_xyzw = new_rotation.as_quat() # Returns xyzw, normalized
+        
+        # Storing tcp_pose as [pos (3), quat_xyzw (4)]
+        obs["state"]["tcp_pose"] = np.concatenate([tcp_world_pos, tcp_world_quat_xyzw]).astype(np.float32)
+        obs["state"]["tcp_vel"] = self._get_vel() 
+        obs["state"]["gripper_pos"] = np.array([2 * self.data.qpos[8] / self._GRIPPER_HOME[0]], dtype=np.float32)
+        obs["state"]["gripper_vec"] = self.gripper_vec.astype(np.float32)
 
-        if not self.image_obs:
-            obs["state"]["block_pos"] = self.data.sensor("block1_pos").data.astype(np.float32)
+        # --- Image observations ---
         if self.image_obs:
             obs["images"] = {}
             for cam_name in self.cameras:
                 cam_id = self.model.camera(cam_name).id
                 obs["images"][cam_name] = self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
+        
+        # --- State-based strawberry information ---
+        if not self.image_obs or self.include_priveleged_obs:
+            MAX_OBSERVABLE_STRAWBERRIES = self.num_green + 1 
+            
+            # Use the (potentially noised) tcp_world_pos for relative calculations
+            tcp_current_pos_for_relative = tcp_world_pos 
+
+            # --- Red Strawberry STEMS: Relative Positions, Distances, and Mask ---
+            red_stem_positions_relative_sorted = np.zeros((MAX_OBSERVABLE_STRAWBERRIES, 3), dtype=np.float32)
+            red_stem_distances_sorted = np.zeros(MAX_OBSERVABLE_STRAWBERRIES, dtype=np.float32)
+            red_stem_mask_sorted = np.zeros(MAX_OBSERVABLE_STRAWBERRIES, dtype=np.float32)
+            
+            active_red_stem_data = []
+            if hasattr(self, 'red_blocks') and self.red_blocks:
+                for block_idx in self.red_blocks:
+                    try:
+                        strawberry_stem_pos_world = self.data.sensor(f"stem{block_idx}_pos").data.copy()
+                        dist = np.linalg.norm(strawberry_stem_pos_world - tcp_current_pos_for_relative)
+                        relative_pos = strawberry_stem_pos_world - tcp_current_pos_for_relative
+                        active_red_stem_data.append({'distance': dist, 'relative_pos': relative_pos})
+                    except Exception as e:
+                        # print(f"Warning: Could not get stem pos for red_block {block_idx}: {e}")
+                        pass
+            
+            active_red_stem_data.sort(key=lambda s: s['distance'])
+
+            for i, data in enumerate(active_red_stem_data):
+                if i < MAX_OBSERVABLE_STRAWBERRIES:
+                    red_stem_positions_relative_sorted[i, :] = data['relative_pos']
+                    red_stem_distances_sorted[i] = data['distance']
+                    red_stem_mask_sorted[i] = 1.0 
+                else:
+                    break 
+            
+            obs["state"]["all_red_pos_relative"] = red_stem_positions_relative_sorted
+            obs["state"]["all_red_distances"] = red_stem_distances_sorted
+            obs["state"]["all_red_mask"] = red_stem_mask_sorted
+
+            # --- Green Strawberry BLOCKS: Relative Positions, Distances, and Mask ---
+            green_block_positions_relative_sorted = np.zeros((MAX_OBSERVABLE_STRAWBERRIES, 3), dtype=np.float32)
+            green_block_distances_sorted = np.zeros(MAX_OBSERVABLE_STRAWBERRIES, dtype=np.float32)
+            green_block_mask_sorted = np.zeros(MAX_OBSERVABLE_STRAWBERRIES, dtype=np.float32)
+
+            active_green_block_data = []
+            if hasattr(self, 'green_blocks') and self.green_blocks: # Ensure self.green_blocks is populated
+                for block_idx in self.green_blocks:
+                    try:
+                        strawberry_block_pos_world = self.data.sensor(f"block{block_idx}_pos").data.copy()
+                        dist = np.linalg.norm(strawberry_block_pos_world - tcp_current_pos_for_relative)
+                        relative_pos = strawberry_block_pos_world - tcp_current_pos_for_relative
+                        active_green_block_data.append({'distance': dist, 'relative_pos': relative_pos})
+                    except Exception as e:
+                        # print(f"Warning: Could not get block pos for green_block {block_idx}: {e}")
+                        pass
+            
+            active_green_block_data.sort(key=lambda s: s['distance'])
+
+            for i, data in enumerate(active_green_block_data):
+                if i < MAX_OBSERVABLE_STRAWBERRIES:
+                    green_block_positions_relative_sorted[i, :] = data['relative_pos']
+                    green_block_distances_sorted[i] = data['distance']
+                    green_block_mask_sorted[i] = 1.0
+                else:
+                    break
+            
+            obs["state"]["all_green_pos_relative"] = green_block_positions_relative_sorted
+            obs["state"]["all_green_distances"] = green_block_distances_sorted
+            obs["state"]["all_green_mask"] = green_block_mask_sorted
+            
+            # --- Number of remaining red strawberries ---
+            num_red_left = 0
+            if hasattr(self, 'red_blocks'):
+                num_red_left = len(self.red_blocks)
+            obs["state"]["num_red_left"] = np.array([num_red_left], dtype=np.float32)
 
         if self.render_mode == "human":
             self._viewer.render(self.render_mode)
