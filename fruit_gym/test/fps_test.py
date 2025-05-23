@@ -22,7 +22,7 @@ def make_env(camera_res: int = 480,
              max_steps: int = 500) -> gym.Env:
     """Instantiate the PickMultiStrawbEnv with the same wrappers you use."""
     env = gym.make(
-        "PickMultiStrawbEnv",
+        "PickMultiStrawbPhysicsEnv",
         randomize_domain=True,
         image_obs=False,
         reward_type="dense",
