@@ -863,6 +863,7 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
     
     def _compute_reward(self, action):
         # 16th May 21st may runs on lab PC + Gemini suggestions
+        # 26th May changed scales
         tcp_pos = self.data.sensor("long_pinch_pos").data
 
         # Positive reward for moving towards closest red strawb
@@ -1017,13 +1018,13 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
                        'r_alive': r_alive}
             reward_scales = {'r_grasp': 25.0, 
                              'r_red': 2.0, 
-                             'r_col': 0.5, 
-                             'r_dist': 1.0, 
+                             'r_col': 0.0, 
+                             'r_dist': 0.0, 
                              'r_attempt_close': 1.0, 
                              'r_bad_grasp': 0.0, 
-                             'r_energy': 1.0 , 
-                             'r_smooth': 1.0,
-                             'r_alive': 3.0}
+                             'r_energy': 0.0 , 
+                             'r_smooth': 0.0,
+                             'r_alive': 0.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
             info = rewards
