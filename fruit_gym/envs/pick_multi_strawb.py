@@ -1045,12 +1045,12 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                        'r_energy': r_energy, 
                        'r_smooth': r_smooth,
                        'r_alive': r_alive}
-            reward_scales = {'r_grasp': 25.0, 
+            reward_scales = {'r_grasp': 8.0, 
                              'r_red': 4.0, 
                              'r_col': 0.0, 
                              'r_dist': 1.0, 
                              'r_attempt_close': 0.0, 
-                             'r_bad_grasp': 0.5, 
+                             'r_bad_grasp': 0.0, 
                              'r_energy': 2.0, 
                              'r_smooth': 1.0,
                              'r_alive': 0.0}
