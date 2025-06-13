@@ -409,6 +409,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         active_count = np.random.randint(1, len(distractor_indices) + 1)
         active_indices = np.random.choice(distractor_indices, size=active_count, replace=False)
         self.active_indices = active_indices
+        # Store active indices for ensuring min 2 red strawberries
+        self.active_visual_geoms = {}
 
         for i in distractor_indices:
             vine_body_name = f"vine{i}"
@@ -462,6 +464,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         if name == active_sub:
                             if geom_name == f"{name}_visual":
                                 self.model.geom_rgba[geom_id] = chosen_rgba
+                                # store active visual geoms to check if at least 2 red strawberries are present
+                                self.active_visual_geoms[i] = geom_id
                                 if colour == "red":
                                     self.red_blocks.append(i)
                                 elif colour == "green":
@@ -478,6 +482,23 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                             self.model.geom_group[geom_id] = 3
                             self.model.geom_contype[geom_id] = 0
                             self.model.geom_conaffinity[geom_id] = 0
+
+         # loop to ensure at least 2 red strawberries
+        while len(self.red_blocks) < 2:
+            # If there are no green strawberries left to convert, stop.
+            if not self.green_blocks:
+                break
+            
+            # Pop a random green strawberry's index from the list
+            idx_to_change = self.green_blocks.pop(np.random.randint(len(self.green_blocks)))
+            # Add it to the red list
+            self.red_blocks.append(idx_to_change)
+            # Find the visual geometry ID that we stored earlier
+            geom_id_to_change = self.active_visual_geoms.get(idx_to_change)
+            # If found, update its color to red
+            if geom_id_to_change is not None:
+                self.model.geom_rgba[geom_id_to_change] = red_rgba
+
 
         self.data.qvel[:] = 0
         self.data.qacc[:] = 0
@@ -721,6 +742,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         reward, info = self._compute_reward(action)
         if info['success'] == True:
             terminated = True
+            if self.reward_type == "dense":
+                reward += 100.0
         else:
             terminated = False
         self.prev_gripper_state = self.gripper_state
@@ -1023,13 +1046,13 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                        'r_smooth': r_smooth,
                        'r_alive': r_alive}
             reward_scales = {'r_grasp': 25.0, 
-                             'r_red': 2.0, 
+                             'r_red': 4.0, 
                              'r_col': 0.0, 
-                             'r_dist': 0.25, 
+                             'r_dist': 1.0, 
                              'r_attempt_close': 0.0, 
                              'r_bad_grasp': 0.5, 
-                             'r_energy': 0.0, 
-                             'r_smooth': 0.5,
+                             'r_energy': 2.0, 
+                             'r_smooth': 1.0,
                              'r_alive': 0.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
             reward = np.clip(sum(rewards.values()), -1e4, 1e4)
