@@ -891,21 +891,98 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         return obs
     
+    def is_stem_in_gripper_box(self, stem_pos: np.ndarray) -> bool:
+        """
+        Checks if a world-space point is within the 3D box defined by two
+        central gripper sites and constant height/depth values.
+        """
+        # Use the reliable constants you measured earlier
+        BOX_HEIGHT = 0.041
+        BOX_DEPTH = 0.038  
+        
+        # 1. Get the world positions of the two central sites
+        pos_left = self.data.site('left_pinch').xpos
+        pos_right = self.data.site('right_pinch').xpos
+        # 2. Define the box's center and orientation
+        # The origin is the midpoint between the two fingers
+        box_origin = (pos_left + pos_right) / 2
+        # Use the main 'pinch' site for a stable orientation reference
+        box_orientation = self.data.site('long_pinch').xmat.reshape(3, 3)
+        # 3. Define the box's dimensions
+        # Width is calculated live, height and depth are from constants
+        box_width = np.linalg.norm(pos_left - pos_right)
+        # 4. Transform the stem's position into the box's local coordinate frame
+        vec_world = stem_pos - box_origin
+        local_stem_pos = box_orientation.T @ vec_world
+        # 5. Perform the checks in the simple, local coordinate system
+        # Check height against the constant BOX_HEIGHT
+        in_height = -BOX_HEIGHT / 2 <= local_stem_pos[0] <= BOX_HEIGHT / 2
+        # Check width against the live-measured box_width
+        in_width = -box_width / 2 <= local_stem_pos[1] <= box_width / 2
+        # Check depth against the constant BOX_DEPTH. Assumes origin is in the middle of the depth.
+        in_depth = -BOX_DEPTH / 2 <= local_stem_pos[2] <= BOX_DEPTH / 2
+
+        return in_height and in_width and in_depth
+
+    
     def _compute_reward(self, action):
         # 16th May 21st may runs on lab PC + Gemini suggestions
         tcp_pos = self.data.sensor("long_pinch_pos").data
+        left_pinch_pos = self.data.sensor("left_pinch_pos").data
+        right_pinch_pos = self.data.sensor("right_pinch_pos").data
 
-        # Positive reward for moving towards closest red strawb
+        # --- MODIFICATION START ---
+        # This block replaces the original r_red calculation to also compute r_alignment.
+        
+        r_red = 0.0
+        r_alignment = 0.0
+        min_red_dist = float('inf')
+        
+        # Calculate rewards related to the closest red strawberry
         if len(self.red_blocks) > 0:
-            dists = []
+            # Find the closest red strawberry stem
+            closest_red_stem_pos = None
+            dists = {}
             for red_idx in self.red_blocks:
-                curr_pos = self.data.sensor(f"stem{red_idx}_pos").data
-                dist = np.linalg.norm(curr_pos - tcp_pos)
-                dists.append(dist)
-            min_red_dist = min(dists)
-            r_red = 1 - np.tanh(5 * min_red_dist)
-        else:
-            r_red = 0.0
+                stem_pos = self.data.sensor(f"stem{red_idx}_pos").data
+                dists[red_idx] = (np.linalg.norm(stem_pos - left_pinch_pos) + 
+                                  np.linalg.norm(stem_pos - right_pinch_pos)) / 2.0
+
+            if dists:
+                closest_red_idx = min(dists, key=dists.get)
+                min_red_dist = dists[closest_red_idx]
+                closest_red_stem_pos = self.data.sensor(f"stem{closest_red_idx}_pos").data
+
+            # 1. Reward for being close to the nearest red strawberry (r_red)
+            r_red = 1 - np.tanh(20 * min_red_dist)
+
+            # 2. NEW REWARD: Reward for aligning the gripper with the stem (r_alignment)
+            # This is given when the stem is between the gripper fingers (i.e., aligned with the central axis).
+            if closest_red_stem_pos is not None:
+                # Get the gripper's orientation matrix (its local axes in the world frame)
+                pinch_rot_mat = self.data.site_xmat[self._pinch_site_id].reshape(3, 3)
+                gripper_x_axis = pinch_rot_mat[:, 0] # Axis perpendicular to finger motion
+                gripper_y_axis = pinch_rot_mat[:, 1] # Axis parallel to finger motion
+                
+                # Vector from the gripper's center to the target stem
+                vec_to_stem = closest_red_stem_pos - tcp_pos
+                
+                # Project the vector onto the gripper's plane (the plane of the opening)
+                proj_x = np.dot(vec_to_stem, gripper_x_axis)
+                proj_y = np.dot(vec_to_stem, gripper_y_axis)
+                
+                # This is the radial distance from the stem to the gripper's central approach axis.
+                # A smaller distance means better alignment.
+                radial_dist = np.sqrt(proj_x**2 + proj_y**2)
+                
+                # The reward is high when the alignment is good (radial_dist is close to zero).
+                # The scaling factor of 40 makes the reward sensitive to small misalignments.
+                r_alignment = 1 - np.tanh(60 * np.abs(proj_y))
+
+                r_in_box = 0.0
+                if self.is_stem_in_gripper_box(closest_red_stem_pos):
+                    r_in_box = 1.0
+        # --- MODIFICATION END ---
 
         red_distance = 0
         green_distance = 0
@@ -1038,6 +1115,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         if self.reward_type == "dense":
             rewards = {'r_grasp': r_grasp, 
                        'r_red': r_red, 
+                       'r_alignment': r_alignment,
+                       'r_in_box': r_in_box,
                        'r_col': r_col, 
                        'r_dist': r_dist, 
                        'r_attempt_close': r_attempt_close, 
@@ -1045,8 +1124,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                        'r_energy': r_energy, 
                        'r_smooth': r_smooth,
                        'r_alive': r_alive}
-            reward_scales = {'r_grasp': 8.0, 
+            reward_scales = {'r_grasp': 20.0, 
                              'r_red': 4.0, 
+                             'r_alignment': 4.0,
+                             'r_in_box': 4.0,
                              'r_col': 0.0, 
                              'r_dist': 1.0, 
                              'r_attempt_close': 0.0, 

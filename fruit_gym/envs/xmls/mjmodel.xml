@@ -364,8 +364,8 @@
                         <body name="pinch" pos="0 0 0.105">
                           <site name="pinch" pos="0 0 0" size="0.01" group="3" rgba="1 0 0 1"/>
                         </body>
-                        <body name="long_pinch" pos="0 0 0.135">
-                          <site name="long_pinch" pos="0 0 0" size="0.01" group="3" rgba="1 0 0 1"/>
+                        <body name="long_pinch" pos="0 0 0.142">
+                          <site name="long_pinch" pos="0 0 0" size="0.001" group="3" rgba="1 0 0 1"/>
                         </body>
                         <body name="left_finger" pos="0 0 0.0584">
                           <inertial pos="0 0 0" mass="0.015" diaginertia="2.375e-06 2.375e-06 7.5e-07"/>
@@ -375,6 +375,7 @@
                           <geom name="left_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.01 0.5"/>
                           <geom name="left_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.01 0.5"/>
                           <geom class="visual" material="black" mesh="gripper_long"/>
+                          <site name="left_pinch" pos="0 0 0.0835" size="0.001" group="3" rgba="1 0 0 1"/>
                         </body>
                         <body name="right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                           <inertial pos="0 0 0" mass="0.015" diaginertia="2.375e-06 2.375e-06 7.5e-07"/>
@@ -384,6 +385,11 @@
                           <geom name="right_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.01 0.5"/>
                           <geom name="right_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.01 0.5" group="4"/>
                           <geom class="visual" material="black" mesh="gripper_long"/>
+                          <site name="right_pinch" pos="0 0 0.0835" size="0.001" group="3" rgba="1 0 0 1"/>
+                          <!-- <site name="finger_top"         pos="0.009 0. 0.0835" size="0.002" group="3" rgba="1 0 0 1"/>
+                          <site name="finger_bottom"      pos="-0.009 0 0.0835" size="0.002" group="3" rgba="1 0 0 1"/>
+                          <site name="finger_front"       pos="0 0 0.105" size="0.002" group="3" rgba="1 0 0 1"/>
+                          <site name="finger_back"        pos="0 0 0.06" size="0.002" group="3" rgba="1 0 0 1"/> -->
                         </body>
                       </body>
                     </body>
@@ -439,7 +445,7 @@
               <body name="stem1" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem1" type="capsule" size="0.0007 0.012" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem1" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem1_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem1_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block1" pos="0.0 0.001 0.0">
                   <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/>
                   <geom name="block1" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -480,7 +486,7 @@
               <body name="stem2" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem2" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem2" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem2_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem2_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block2" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
                   <geom name="block2" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -522,7 +528,7 @@
               <body name="stem3" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem3" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem3" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem3_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem3_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block3" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
                   <geom name="block3" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -564,7 +570,7 @@
               <body name="stem4" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem4" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem4" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem4_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem4_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block4" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
                   <geom name="block4" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -606,7 +612,7 @@
               <body name="stem5" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem5" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem5" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem5_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem5_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block5" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
                   <geom name="block5" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -648,7 +654,7 @@
               <body name="stem6" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem6" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem6" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem6_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem6_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block6" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
                   <geom name="block6" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -690,7 +696,7 @@
               <body name="stem7" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem7" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem7" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem7_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem7_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block7" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
                   <geom name="block7" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -732,7 +738,7 @@
               <body name="stem8" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem8" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
                 <site name="stem8" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
-                <site name="stem8_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <site name="stem8_grasp" pos="0.0000 0.051 -0.0006" size="0.0012" rgba="0 0 1 1" group="4"/>
                 <body name="block8" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
                   <geom name="block8" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
@@ -832,6 +838,8 @@
     <torque site="joint7" name="panda/joint7_torque"/> -->
     <force site="attachment_site" name="panda/wrist_force"/>
     <framepos objtype="site" objname="pinch" name="pinch_pos"/>
+    <framepos objtype="site" objname="left_pinch" name="left_pinch_pos"/>
+    <framepos objtype="site" objname="right_pinch" name="right_pinch_pos"/>
     <framequat objtype="site" objname="pinch" name="pinch_quat"/>
     <framelinvel objtype="site" objname="pinch" name="pinch_vel"/>
     <framepos objtype="site" objname="long_pinch" name="long_pinch_pos"/>

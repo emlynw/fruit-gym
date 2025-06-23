@@ -22,7 +22,7 @@ def main():
     waitkey = 10
 
     env = gym.make("PickMultiStrawbEnv", randomize_domain=True, reward_type="dense", ee_dof=6, width=camera_res, height=camera_res, gripper_pause=False)
-    env = TimeLimit(env, max_episode_steps=500)
+    env = TimeLimit(env, max_episode_steps=250)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
     env = GamepadIntervention(env)
@@ -55,6 +55,9 @@ def main():
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
                 # Write reward on the frame
                 cv2.putText(frame, f"Reward: {reward:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(frame, f"Alignment: {info['r_alignment']:.2f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(frame, f"Distance: {info['r_red']:.2f}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(frame, f"Gripper Box: {info['r_in_box']:.2f}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.imshow(camera, frame)
                 cv2.waitKey(waitkey)
 
