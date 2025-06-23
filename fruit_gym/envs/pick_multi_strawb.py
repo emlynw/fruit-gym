@@ -990,7 +990,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             red_distance += np.linalg.norm(self.data.sensor(f"block{i}_pos").data - self.red_positions[i])
         for j in self.green_blocks:
             green_distance += np.linalg.norm(self.data.sensor(f"block{j}_pos").data - self.green_positions[j])
-        total_distance = red_distance + green_distance
+        # total_distance = red_distance + green_distance
+        total_distance = green_distance
         r_dist = 1 - np.tanh(5 * total_distance)
 
         # Penalize large actions an large changes in actions (reduce shakiness)
@@ -1124,10 +1125,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                        'r_energy': r_energy, 
                        'r_smooth': r_smooth,
                        'r_alive': r_alive}
-            reward_scales = {'r_grasp': 20.0, 
+            reward_scales = {'r_grasp': 8.0, 
                              'r_red': 4.0, 
-                             'r_alignment': 4.0,
-                             'r_in_box': 4.0,
+                             'r_alignment': 1.0,
+                             'r_in_box': 1.0,
                              'r_col': 0.0, 
                              'r_dist': 1.0, 
                              'r_attempt_close': 0.0, 
