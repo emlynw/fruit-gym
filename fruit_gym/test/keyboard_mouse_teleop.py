@@ -28,7 +28,7 @@ def main():
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
 
-    env = gym.make("PickMultiStrawbPhysicsEnv", randomize_domain=True, cameras=cameras, include_priveleged_obs=True, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=False)
+    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, cameras=cameras, include_priveleged_obs=False, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=True)
     env = TimeLimit(env, max_episode_steps=500)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
@@ -38,8 +38,8 @@ def main():
                 env = VideoRecorder(env, video_dir, camera_name=image_name, crop_resolution=crop_res, resize_resolution=video_res, fps=fps, record_every=1)
 
     # Define the range for absolute movement control
-    max_speed = 1.0  # Maximum speed in any direction
-    rot_speed = 1.0  # Maximum rotation speed
+    max_speed = 0.5  # Maximum speed in any direction
+    rot_speed = 0.5  # Maximum rotation speed
 
     # Set up mouse callback
     cv2.namedWindow("wrist1")
@@ -92,6 +92,7 @@ def main():
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
                 # Write reward on the frame
                 cv2.putText(frame, f"Reward: {reward:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(frame, f"in box: {info['r_in_box']}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 cv2.imshow(camera, frame)
                 
             # Reset environment on 'R' key press

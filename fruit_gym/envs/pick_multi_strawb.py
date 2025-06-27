@@ -896,7 +896,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         Checks if a world-space point is within the 3D box defined by two
         central gripper sites and constant height/depth values.
         """
-        # Use the reliable constants you measured earlier
         BOX_HEIGHT = 0.041
         BOX_DEPTH = 0.038  
         
@@ -980,8 +979,27 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 r_alignment = 1 - np.tanh(60 * np.abs(proj_y))
 
                 r_in_box = 0.0
-                if self.is_stem_in_gripper_box(closest_red_stem_pos):
-                    r_in_box = 1.0
+                red_stem_is_in_box = self.is_stem_in_gripper_box(closest_red_stem_pos)
+
+                if red_stem_is_in_box:
+                    # A red stem is in the box. Now, verify no green stems are also present.
+                    green_stem_also_in_box = False
+                    if hasattr(self, 'green_blocks') and self.green_blocks:
+                        for green_idx in self.green_blocks:
+                            try:
+                                # Get the position of the green stem's sensor
+                                green_stem_pos = self.data.sensor(f"stem{green_idx}_pos").data
+                                if self.is_stem_in_gripper_box(green_stem_pos):
+                                    green_stem_also_in_box = True
+                                    break  # A green stem is in the box, no need to check further
+                            except KeyError:
+                                # This handles cases where a green strawberry might not have a 'stem' sensor
+                                # for some reason, preventing a crash.
+                                pass
+
+                    # The reward is only given if a red stem is in and no green stems are.
+                    if not green_stem_also_in_box:
+                        r_in_box = 1.0
         # --- MODIFICATION END ---
 
         red_distance = 0
@@ -995,8 +1013,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         r_dist = 1 - np.tanh(5 * total_distance)
 
         # Penalize large actions an large changes in actions (reduce shakiness)
-        r_energy = -np.linalg.norm(action)
-        r_smooth = -np.linalg.norm(action - self.prev_action) 
+        r_energy = -np.linalg.norm(action[:-1])  # Exclude the grasp action
+        r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1]) 
         self.prev_action = action
 
         # Check if gripper pads are in contact with the object
