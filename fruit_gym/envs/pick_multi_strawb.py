@@ -341,7 +341,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         if not object_cfg.get("enabled", False):
             return
         
-          # --- Store initial geom properties once, then restore them each call ---
+        # --- Store initial geom properties once, then restore them each call ---
         if not hasattr(self, '_initial_geom_properties_stored'):
             self._initial_geom_rgba = self.model.geom_rgba.copy()
             self._initial_geom_contype = self.model.geom_contype.copy()
@@ -359,10 +359,12 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
         target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
-        target_pos = self.default_obj_pos + target_pos_noise
+        target_pos = self.data.sensor("pinch_pos").data.copy()
+        target_pos[0] += 0.15
+        target_pos[2] += 0.2
         self.model.body_pos[self.model.body("vine1").id] = target_pos
         # Target orientation
-        random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)  # Random angle in radians
+        random_z_angle = np.random.uniform(low=-np.pi, high=np.pi) # Random angle in radians
         z_rotation = Rotation.from_euler('z', random_z_angle)
         new_rotation = z_rotation * self.initial_vine_rotation
         new_quat = new_rotation.as_quat()
@@ -370,11 +372,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         red_rgba = np.array([0.55, 0.1, 0.1, 1])
         green_rgba = np.array([0.5, 0.63, 0.45, 1])
-        self.red_blocks = [1]
+        
+        # `vine1` is always the primary target and is always red.
+        self.red_blocks = [1] 
         self.green_blocks = []
         self.red_positions = {}
         self.green_positions = {}
 
+        
         target_names = ["block1", "block1_big", "block1_small"]
         sub_geom_ids = {}
         for name in target_names:
@@ -406,19 +411,47 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         distract_pos_noise_high = object_cfg.get("distract_pos_noise_high", [0.0, 0.0, 0.0])
 
         distractor_indices = list(range(2, self.num_green + 2))
-        active_count = np.random.randint(1, len(distractor_indices) + 1)
+        active_count = np.random.randint(4, len(distractor_indices) + 1)
         active_indices = np.random.choice(distractor_indices, size=active_count, replace=False)
         self.active_indices = active_indices
-        # Store active indices for ensuring min 2 red strawberries
         self.active_visual_geoms = {}
+
+        # --- REVISED LOGIC: Set min/max number of red strawberries ---
+        
+        # 1. Define the desired TOTAL number of red strawberries.
+        min_total_red = 2
+        max_total_red_from_config = object_cfg.get("max_red_strawberries", 3)
+        
+        # 2. Since block1 is always red, we need to select (N-1) from the distractors.
+        #    The number of distractors to make red is in the range [min-1, max-1].
+        min_distractors_to_make_red = max(0, min_total_red - 1) # e.g., 2-1=1
+        max_distractors_to_make_red = max(0, max_total_red_from_config - 1) # e.g., 4-1=3
+        
+        # 3. Ensure the number to make doesn't exceed available active distractors.
+        effective_max = min(max_distractors_to_make_red, len(active_indices))
+        
+        # 4. Ensure the minimum is not greater than this effective max.
+        effective_min = min(min_distractors_to_make_red, effective_max)
+        
+        # 5. Determine how many distractors to color red for this episode.
+        num_distractors_to_make_red = 0
+        if effective_min <= effective_max:
+            num_distractors_to_make_red = np.random.randint(effective_min, effective_max + 1)
+        
+        # 6. Select the candidates from the active pool.
+        if num_distractors_to_make_red > 0:
+            red_candidate_indices = np.random.choice(active_indices, size=num_distractors_to_make_red, replace=False)
+        else:
+            red_candidate_indices = []
+        # --- END OF REVISED LOGIC ---
 
         for i in distractor_indices:
             vine_body_name = f"vine{i}"
             vine_body_id = self.model.body(vine_body_name).id
             # Randomize the distractor vine's position.
             distract_pos_noise = np.random.uniform(low=distract_pos_noise_low,
-                                                    high=distract_pos_noise_high,
-                                                    size=3)
+                                                high=distract_pos_noise_high,
+                                                size=3)
             vine_body = self.model.body(f"vine{i}")
             self.model.body_pos[vine_body.id] = target_pos + distract_pos_noise
 
@@ -450,13 +483,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                             self.model.geom_contype[geom_id] = 0
                             self.model.geom_conaffinity[geom_id] = 0
             else:
-                # Otherwise, ensure default collision settings are in place.
-                if np.random.rand() < 0.25:
+                # Assign color based on whether the index was chosen to be red
+                if i in red_candidate_indices:
                     chosen_rgba = red_rgba
                     colour = "red"
                 else:
                     chosen_rgba = green_rgba
                     colour = "green"
+                    
                 active_sub = np.random.choice(sub_names)
                 for name in sub_names:
                     for geom_id in sub_geom_ids[name]:
@@ -464,12 +498,12 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         if name == active_sub:
                             if geom_name == f"{name}_visual":
                                 self.model.geom_rgba[geom_id] = chosen_rgba
-                                # store active visual geoms to check if at least 2 red strawberries are present
                                 self.active_visual_geoms[i] = geom_id
+                                # This is where the lists are populated for the rest of the sim
                                 if colour == "red":
                                     self.red_blocks.append(i)
                                 elif colour == "green":
-                                    self.green_blocks.append(i)                                  
+                                    self.green_blocks.append(i)                               
                             if geom_name == name:
                                 self.model.geom_group[geom_id] = 3
                                 self.model.geom_contype[geom_id] = 1
@@ -482,23 +516,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                             self.model.geom_group[geom_id] = 3
                             self.model.geom_contype[geom_id] = 0
                             self.model.geom_conaffinity[geom_id] = 0
-
-         # loop to ensure at least 2 red strawberries
-        while len(self.red_blocks) < 2:
-            # If there are no green strawberries left to convert, stop.
-            if not self.green_blocks:
-                break
-            
-            # Pop a random green strawberry's index from the list
-            idx_to_change = self.green_blocks.pop(np.random.randint(len(self.green_blocks)))
-            # Add it to the red list
-            self.red_blocks.append(idx_to_change)
-            # Find the visual geometry ID that we stored earlier
-            geom_id_to_change = self.active_visual_geoms.get(idx_to_change)
-            # If found, update its color to red
-            if geom_id_to_change is not None:
-                self.model.geom_rgba[geom_id_to_change] = red_rgba
-
 
         self.data.qvel[:] = 0
         self.data.qacc[:] = 0
@@ -669,20 +686,21 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self.data.mocap_quat[0] = np.roll(final_rotation.as_quat(), 1)
 
         # Handle grasping
+        grasp_threshold = 0.333
         moving_gripper = False
         if self.data.time - self.prev_grasp_time < self.gripper_sleep:
             self.gripper_blocked = True
             grasp = self.prev_grasp
         else:
-            if grasp <= 0.5 and self.gripper_state == 0:
+            if grasp <= grasp_threshold and self.gripper_state == 0:
                 self.gripper_vec = self.gripper_dict["open"]
                 self.gripper_blocked = False
                 moving_gripper=False
-            elif grasp >= -0.5 and self.gripper_state == 1:
+            elif grasp >= -grasp_threshold and self.gripper_state == 1:
                 self.gripper_vec = self.gripper_dict["closed"]
                 self.gripper_blocked = False
                 moving_gripper=False
-            elif grasp < -0.5 and self.gripper_state == 1:
+            elif grasp < -grasp_threshold and self.gripper_state == 1:
                 self.data.ctrl[self._gripper_ctrl_id] = self._GRIPPER_MAX
                 self.gripper_state = 0
                 self.gripper_vec = self.gripper_dict["opening"]
@@ -691,7 +709,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 self.gripper_blocked=True
                 moving_gripper=True
                 target_sim_time = self.data.time + self.gripper_sleep
-            elif grasp > 0.5 and self.gripper_state == 0:
+            elif grasp > grasp_threshold and self.gripper_state == 0:
                 self.data.ctrl[self._gripper_ctrl_id] = 0
                 self.gripper_state = 1
                 self.gripper_vec = self.gripper_dict["closing"]
@@ -1013,8 +1031,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         r_dist = 1 - np.tanh(5 * total_distance)
 
         # Penalize large actions an large changes in actions (reduce shakiness)
-        r_energy = -np.linalg.norm(action[:-1])  # Exclude the grasp action
-        r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1]) 
+        r_energy = -np.tanh(0.5*np.linalg.norm(action[:-1]))  # Exclude the grasp action
+        r_smooth = -np.tanh(0.5*np.linalg.norm(action[:-1] - self.prev_action[:-1]))
         self.prev_action = action
 
         # Check if gripper pads are in contact with the object
@@ -1147,11 +1165,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                              'r_red': 4.0, 
                              'r_alignment': 1.0,
                              'r_in_box': 1.0,
-                             'r_col': 0.0, 
+                             'r_col': 0.5, 
                              'r_dist': 1.0, 
                              'r_attempt_close': 0.0, 
                              'r_bad_grasp': 0.0, 
-                             'r_energy': 2.0, 
+                             'r_energy': 1.0, 
                              'r_smooth': 1.0,
                              'r_alive': 0.0}
             rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
