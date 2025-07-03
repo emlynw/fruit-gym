@@ -1,0 +1,29 @@
+<mujoco model="scene">
+  <compiler angle="radian" meshdir="assets/"/>
+
+  <option noslip_tolerance="0" viscosity="0.0009" integrator="implicitfast" noslip_iterations="5">
+    <flag multiccd="enable"/>
+  </option>
+
+  <size memory="80M"/>
+
+  <visual>
+    <global azimuth="120" elevation="-20"/>
+    <quality shadowsize="2048"/>
+    <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" name="sky_4" file="textures/skyboxes/sky_4.png" gridsize="3 4" gridlayout=".U..LFRB.D.."/>
+    <texture type="2d" name="Grass001" file="textures/Grass001_2K-PNG_Color.png"/>
+    <material name="floor" texture="Grass001" specular="1" shininess="1"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="floor"/>
+  </worldbody>
+
+  <include file="robot_simple.xml"/>
+
+</mujoco>
