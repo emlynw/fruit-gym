@@ -24,6 +24,6 @@
     <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="floor"/>
   </worldbody>
 
-  <include file="robot_simple.xml"/>
+  <include file="robot.xml"/>
 
 </mujoco>

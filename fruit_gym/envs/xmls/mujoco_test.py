@@ -6,14 +6,15 @@ import time
 from pathlib import Path
 import cv2 # Import OpenCV
 import psutil # Import the process utilities library
+import gc
 
 def randomize_mesh_scale_with_spec(spec, mesh_name_prefixes):
     """
     Randomly changes the scale of all meshes matching the given prefixes.
     This works even with suffixed names from multiple attachments.
     """
-    min_scale_factor = 0.8
-    max_scale_factor = 1.2
+    min_scale_factor = 0.5
+    max_scale_factor = 1.5
     scale_factor = np.random.uniform(low=min_scale_factor, high=max_scale_factor)
     print(f"Updating spec for meshes with scale factor: {scale_factor:.3f}")
 
@@ -86,8 +87,8 @@ def main():
     # Create a camera object and position it to see the scene
     cam = mujoco.MjvCamera()
     mujoco.mjv_defaultCamera(cam)
-    cam.lookat = [0.5, 0, 0.5]
-    cam.distance = 3.0
+    cam.lookat = [0.5, 0, 0.6]
+    cam.distance = 1.0
     cam.elevation = -20.0
     cam.azimuth = 90.0
     
@@ -125,6 +126,7 @@ def main():
                 # Use recompile to update the model and data in-place
                 model, data = main_spec.recompile(model, data)
                 renderer.close()
+                gc.collect()  # Force garbage collection to free up memory
                 renderer = mujoco.Renderer(model, height=480, width=480)
                 print("   Model recompiled and renderer recreated.")
             elif key == ord('p'):
@@ -133,6 +135,7 @@ def main():
                 # Use recompile to update the model and data in-place
                 model, data = main_spec.recompile(model, data)
                 renderer.close()
+                gc.collect()
                 renderer = mujoco.Renderer(model, height=480, width=480)
                 print("   Model recompiled and renderer recreated.")
 
