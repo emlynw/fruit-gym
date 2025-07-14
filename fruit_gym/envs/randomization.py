@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from typing import Dict, Any
+import mujoco
 
 def lighting_noise(env: Any) -> None:
     """
@@ -147,11 +148,11 @@ def skybox_noise(env: Any) -> None:
         env: The environment instance (must have attribute: skybox_tex_ids, model, _viewer).
     """
     skybox_tex_id = np.random.choice(env.skybox_tex_ids)
-    start_idx = env.model.name_texadr[skybox_tex_id]
-    end_idx = env.model.name_texadr[skybox_tex_id + 1] - 1 if skybox_tex_id + 1 < len(env.model.name_texadr) else None
-    texture_name = env.model.names[start_idx:end_idx].decode('utf-8')
-    if 'sky' not in texture_name:
-        env.model.geom('floor').group = 3
-    else:
+    name_start = env.model.name_texadr[skybox_tex_id]
+    raw = env.model.names[name_start:]            # grab bytes to the end
+    texture_name = raw.split(b'\x00', 1)[0].decode('utf-8')
+    if 'sky' in texture_name.lower():
         env.model.geom('floor').group = 0
-    env._viewer.model.tex_adr[0] = env.model.tex_adr[skybox_tex_id]
+    else:
+        env.model.geom('floor').group = 3
+    env.model.tex_adr[0] = env.model.tex_adr[skybox_tex_id]
