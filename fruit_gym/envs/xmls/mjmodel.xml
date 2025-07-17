@@ -1,7 +1,7 @@
 <mujoco model="fruit_gym">
   <compiler angle="radian" meshdir="assets/"/>
 
-  <option noslip_tolerance="0" viscosity="0.0009" integrator="implicitfast" noslip_iterations="5">
+  <option noslip_tolerance="0" impratio="5" cone="elliptic" viscosity="0.0009" integrator="implicitfast" noslip_iterations="10">
     <flag multiccd="enable"/>
   </option>
 
@@ -430,17 +430,17 @@
     <body name="vine1" pos="0.45 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="aB_first">
         <joint name="aJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="aG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="aG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="aS_first" pos="0 0 0" group="3"/>
         <body name="aB_1" pos="0.03 0 0">
           <joint name="aJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="aG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="aG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="aB_2" pos="0.03 0 0">
             <joint name="aJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="aG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="aG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="aB_last" pos="0.03 0 0">
               <joint name="aJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="aG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="aG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="aS_last" pos="0.03 0 0" group="3"/>      
               <body name="stem1" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem1" type="capsule" size="0.0007 0.012" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
@@ -470,17 +470,17 @@
     <body name="vine2" pos="0.41 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="bB_first">
         <joint name="bJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="bG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="bG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="bS_first" pos="0 0 0" group="3"/>
         <body name="bB_1" pos="0.03 0 0">
           <joint name="bJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="bG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="bG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="bB_2" pos="0.03 0 0">
             <joint name="bJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="bG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="bG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="bB_last" pos="0.03 0 0">
               <joint name="bJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="bG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="bG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="bS_last" pos="0.03 0 0" group="3"/>
               <body name="stem2" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem2" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
@@ -511,17 +511,17 @@
     <body name="vine3" pos="0.41 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="cB_first">
         <joint name="cJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="cG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="cG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="cS_first" pos="0 0 0" group="3"/>
         <body name="cB_1" pos="0.03 0 0">
           <joint name="cJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="cG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="cG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="cB_2" pos="0.03 0 0">
             <joint name="cJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="cG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="cG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="cB_last" pos="0.03 0 0">
               <joint name="cJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="cG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="cG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="cS_last" pos="0.03 0 0" group="3"/>
               <body name="stem3" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem3" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
@@ -552,17 +552,17 @@
     <body name="vine4" pos="0.41 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="dB_first">
         <joint name="dJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="dG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="dG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="dS_first" pos="0 0 0" group="3"/>
         <body name="dB_1" pos="0.03 0 0">
           <joint name="dJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="dG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="dG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="dB_2" pos="0.03 0 0">
             <joint name="dJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="dG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="dG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="dB_last" pos="0.03 0 0">
               <joint name="dJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="dG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="dG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="dS_last" pos="0.03 0 0" group="3"/>
               <body name="stem4" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem4" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
@@ -593,17 +593,17 @@
     <body name="vine5" pos="0.41 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="eB_first">
         <joint name="eJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="eG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="eG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="eS_first" pos="0 0 0" group="3"/>
         <body name="eB_1" pos="0.03 0 0">
           <joint name="eJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="eG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="eG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="eB_2" pos="0.03 0 0">
             <joint name="eJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="eG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="eG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="eB_last" pos="0.03 0 0">
               <joint name="eJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="eG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="eG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="eS_last" pos="0.03 0 0" group="3"/>
               <body name="stem5" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem5" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
@@ -634,17 +634,17 @@
     <body name="vine6" pos="0.41 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="fB_first">
         <joint name="fJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="fG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="fG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="fS_first" pos="0 0 0" group="3"/>
         <body name="fB_1" pos="0.03 0 0">
           <joint name="fJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="fG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="fG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="fB_2" pos="0.03 0 0">
             <joint name="fJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="fG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="fG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="fB_last" pos="0.03 0 0">
               <joint name="fJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="fG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="fG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="fS_last" pos="0.03 0 0" group="3"/>
               <body name="stem6" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem6" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
@@ -675,17 +675,17 @@
     <body name="vine7" pos="0.41 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="gB_first">
         <joint name="gJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="gG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="gG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="gS_first" pos="0 0 0" group="3"/>
         <body name="gB_1" pos="0.03 0 0">
           <joint name="gJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="gG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="gG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="gB_2" pos="0.03 0 0">
             <joint name="gJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="gG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="gG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="gB_last" pos="0.03 0 0">
               <joint name="gJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="gG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="gG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="gS_last" pos="0.03 0 0" group="3"/>
               <body name="stem7" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem7" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
@@ -716,17 +716,17 @@
     <body name="vine8" pos="0.41 -0.03 0.9" quat="0.707388 0 0.706825 0">
       <body name="hB_first">
         <joint name="hJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-        <geom name="hG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <geom name="hG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
         <site name="hS_first" pos="0 0 0" group="3"/>
         <body name="hB_1" pos="0.03 0 0">
           <joint name="hJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-          <geom name="hG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <geom name="hG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
           <body name="hB_2" pos="0.03 0 0">
             <joint name="hJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-            <geom name="hG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <geom name="hG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
             <body name="hB_last" pos="0.03 0 0">
               <joint name="hJ_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.001"/>
-              <geom name="hG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.01 0.1" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <geom name="hG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
               <site name="hS_last" pos="0.03 0 0" group="3"/>
               <body name="stem8" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
                 <geom name="stem8" type="capsule" size="0.0007 0.014" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>

@@ -1083,6 +1083,13 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 total_displacement += np.linalg.norm(current_pos - initial_pos)
             except KeyError:
                 pass
+        for i in self.red_blocks:
+            try:
+                current_pos = self.data.sensor(f"stem{i}_pos").data
+                initial_pos = self.red_positions[i]
+                total_displacement += np.linalg.norm(current_pos - initial_pos)
+            except KeyError:
+                pass
         info["total_displacement"] = total_displacement
         
         return info
@@ -1190,13 +1197,13 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         collision_detected = privileged_info["collision_detected"]
         
         # Compute rewards using extracted info
-        r_red = 1 - np.tanh(20 * min_red_dist) if min_red_dist != float('inf') else 0.0
-        r_alignment = 1 - np.tanh(60 * privileged_info["radial_dist"]) if min_red_dist != float('inf') else 0.0
+        r_red = - np.tanh(20 * min_red_dist) if min_red_dist != float('inf') else 0.0
+        r_alignment = - np.tanh(60 * privileged_info["radial_dist"]) if min_red_dist != float('inf') else 0.0
         r_in_box = float(privileged_info["stem_in_box"])
         r_col = -1.0 if collision_detected else 0.0
         
         # Calculate distractor displacement reward
-        r_dist = 1 - np.tanh(5 * privileged_info["total_displacement"])
+        r_dist = - np.tanh(5 * privileged_info["total_displacement"])
         
         # Penalize large actions and large changes in actions (reduce shakiness)
         r_energy = -np.tanh(0.5*np.linalg.norm(action[:-1]))  # Exclude the grasp action
@@ -1267,11 +1274,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                     'r_energy': r_energy, 
                     'r_smooth': r_smooth,
                     'r_alive': r_alive}
-            reward_scales = {'r_grasp': 20.0, 
+            reward_scales = {'r_grasp': 50.0, 
                             'r_red': 4.0, 
                             'r_alignment': 1.0,
                             'r_in_box': 1.0,
-                            'r_col': 0.5, 
+                            'r_col': 1.0, 
                             'r_dist': 1.0, 
                             'r_attempt_close': 0.0, 
                             'r_bad_grasp': 0.0, 
