@@ -61,6 +61,7 @@ def main():
                 cv2.putText(frame, f"Energy: {info['r_energy']:.2f}", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(frame, f"Smoothness: {info['r_smooth']:.2f}", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(frame, f"collision: {info['r_col']:.2f}", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(frame, f"displacement: {info['r_dist']:.2f}", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.imshow(camera, frame)
                 cv2.waitKey(waitkey)
 

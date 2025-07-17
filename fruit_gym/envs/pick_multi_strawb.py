@@ -632,11 +632,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self._block_success[0] = self._x_success
             self._block_success[2] = self._z_success
 
-            self.distractor_displacements = []
-            for i in self.active_indices:
-                self.distractor_displacements.append(self.data.sensor(f"block{i}_pos").data)
-            self.distractor_displacements = np.array(self.distractor_displacements)
-            self.distractor_displacements_2 = self.distractor_displacements.copy()
+            for i in self.red_blocks:
+                self.red_positions[i] = self.data.sensor(f"block{i}_pos").data.copy()
+            for j in self.green_blocks:
+                self.green_positions[j] = self.data.sensor(f"block{j}_pos").data.copy()
 
             self.grasp = -1.0
             self.prev_grasp_time = 0.0
@@ -1085,7 +1084,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 pass
         for i in self.red_blocks:
             try:
-                current_pos = self.data.sensor(f"stem{i}_pos").data
+                current_pos = self.data.sensor(f"block{i}_pos").data
                 initial_pos = self.red_positions[i]
                 total_displacement += np.linalg.norm(current_pos - initial_pos)
             except KeyError:
