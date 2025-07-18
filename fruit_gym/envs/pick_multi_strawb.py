@@ -193,8 +193,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             "tcp_pose": Box(-np.inf, np.inf, shape=(7,), dtype=np.float32), # 3 pos, 4 quat (xyzw)
             "tcp_vel": Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
             "gripper_pos": Box(-1, 1, shape=(1,), dtype=np.float32),
-            "gripper_vec": Box(0.0, 1.0, shape=(4,), dtype=np.float32),
         }
+        if self.discrete_gripper:
+            state_space_dict["gripper_vec"] = Box(0, 1, shape=(4,), dtype=np.float32)
 
         if not image_obs:
             # Add detailed strawberry information if not using image observations
@@ -828,24 +829,13 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                     target_sim_time = self.data.time + self.gripper_sleep
         else:  # Continuous gripper control
             grasp_action = action[-1]
+
+            gripper_speed = 0.005
             prev_grasp_action = self.prev_action[-1]
 
-            # Map action from [-1, 1] to the actuator's control range [0, 0.04].
-            gripper_ctrl_target = (grasp_action + 1.0) / 2.0 * self._GRIPPER_MAX
-            self.data.ctrl[self._gripper_ctrl_id] = np.clip(gripper_ctrl_target, 0.0, self._GRIPPER_MAX)
-
-            # Update gripper state vector based on change in action
-            if grasp_action > prev_grasp_action:
-                self.gripper_vec = self.gripper_dict["opening"]
-                self.gripper_state = 0  # Target state is open
-            elif grasp_action < prev_grasp_action:
-                self.gripper_vec = self.gripper_dict["closing"]
-                self.gripper_state = 1  # Target state is closed
-            else:  # Command is unchanged, update to stable state
-                if self.gripper_state == 0:
-                    self.gripper_vec = self.gripper_dict["open"]
-                else:
-                    self.gripper_vec = self.gripper_dict["closed"]
+            current_gripper_pos = self.data.qpos[self._gripper_ctrl_id]
+            new_target_pos = current_gripper_pos + -grasp_action * gripper_speed
+            self.data.ctrl[self._gripper_ctrl_id] = np.clip(new_target_pos, 0.0, self._GRIPPER_MAX)
         
         return moving_gripper, target_sim_time
     
@@ -1194,7 +1184,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         obs["state"]["tcp_pose"] = np.concatenate([tcp_world_pos, tcp_world_quat_xyzw]).astype(np.float32)
         obs["state"]["tcp_vel"] = self._get_vel() 
         obs["state"]["gripper_pos"] = np.array([2 * self.data.qpos[8] / self._GRIPPER_HOME[0]], dtype=np.float32)
-        obs["state"]["gripper_vec"] = self.gripper_vec.astype(np.float32)
+        if self.discrete_gripper:
+            obs["state"]["gripper_vec"] = self.gripper_vec.astype(np.float32)
 
         if self.include_privileged_obs:
             privileged_info = getattr(self, 'current_privileged_info', self._compute_privileged_info())
