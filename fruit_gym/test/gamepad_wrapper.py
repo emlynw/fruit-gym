@@ -194,6 +194,12 @@ class GamepadIntervention(gym.ActionWrapper):
         new_action, replaced = self.action(action)
         obs, rew, done, truncated, info = self.env.step(new_action)
 
+        if info['r_col'] < 0:
+            try:
+                self.expert.joystick.rumble(0.4, 0.4, 250)
+            except Exception as e:
+                print("Failed to activate rumble:", e)
+
         # If we replaced the action, record that in info
         if replaced:
             info["intervene_action"] = new_action

@@ -241,8 +241,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             priv_state_space_dict["collision_detected"] = Box(
                 0.0, 1.0, shape=(1,), dtype=np.float32
             )
-            priv_state_space_dict["stem_in_gripper_box"] = Box(
-                0.0, 1.0, shape=(1,), dtype=np.float32
+            priv_state_space_dict["red_stems_in_box_count"] = Box(
+                0, MAX_OBSERVABLE_STRAWBERRIES, shape=(1,), dtype=np.float32
+            )
+            priv_state_space_dict["green_stems_in_box_count"] = Box(
+                0, MAX_OBSERVABLE_STRAWBERRIES, shape=(1,), dtype=np.float32
             )
             # Contact information for each finger
             priv_state_space_dict["left_finger_contacts"] = Box(
@@ -976,7 +979,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             "good_grasp": False,
             "bad_grasp": False,
             "collision_detected": False,
-            "stem_in_box": False,
+            "red_stems_in_box_count": 0,
+            "green_stems_in_box_count": 0,
             "left_finger_contacts": 0,
             "right_finger_contacts": 0,
             "total_displacement": 0.0,
@@ -1003,8 +1007,46 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 proj_y = np.dot(vec_to_stem, gripper_y_axis)
                 info["radial_dist"] = abs(proj_y)
                 
-                # Check if stem is in gripper box
-                info["stem_in_box"] = self.is_stem_in_gripper_box(closest_red_stem_pos)
+         # Check how many RED stems are in the gripper box
+        if hasattr(self, 'red_blocks'):
+            for red_idx in self.red_blocks:
+                try:
+                    stem_pos = self.data.sensor(f"stem{red_idx}_pos").data
+                    if self.is_stem_in_gripper_box(stem_pos):
+                        info["red_stems_in_box_count"] += 1
+                except Exception:
+                    pass
+
+        # Check how many GREEN stems are in the gripper box
+        green_vine_part_in_box = False
+        if hasattr(self, 'green_blocks'):
+            for green_idx in self.green_blocks:
+                try:
+                    stem_pos = self.data.sensor(f"stem{green_idx}_pos").data
+                    if self.is_stem_in_gripper_box(stem_pos):
+                        green_vine_part_in_box = True
+                        break  # A green vine is in the box, no need to check other green vines
+                except Exception:
+                    pass
+                # Determine the character prefix for the vine's geoms (b for 2, c for 3, etc.)
+                prefix_char = chr(ord('`') + green_idx)
+                # Loop through the 4 geoms that make up the vine (e.g., bG0, bG1, bG2, bG3)
+                for i in range(4):
+                    geom_name = f"{prefix_char}G{i}"
+                    try:
+                        geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+                        geom_pos = self.data.geom_xpos[geom_id]
+                        if self.is_stem_in_gripper_box(geom_pos):
+                            green_vine_part_in_box = True
+                            break  # A part is in the box, no need to check other parts of this vine
+                    except KeyError:
+                        # This geom name doesn't exist, which is fine. Continue to the next.
+                        pass
+                if green_vine_part_in_box:
+                    break # A green vine is in the box, no need to check other green vines
+
+        # Update the info dict based on our findings. This re-uses the existing reward logic.
+        info["green_stems_in_box_count"] = 1 if green_vine_part_in_box else 0
         
         # Contact analysis - track which stems each finger contacts
         left_contacts = 0
@@ -1163,7 +1205,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             obs["priv_state"]["good_grasp_detected"] = np.array([float(privileged_info["good_grasp"])], dtype=np.float32)
             obs["priv_state"]["bad_grasp_detected"] = np.array([float(privileged_info["bad_grasp"])], dtype=np.float32)
             obs["priv_state"]["collision_detected"] = np.array([float(privileged_info["collision_detected"])], dtype=np.float32)
-            obs["priv_state"]["stem_in_gripper_box"] = np.array([float(privileged_info["stem_in_box"])], dtype=np.float32)
+            obs["priv_state"]["red_stems_in_box_count"] = np.array([privileged_info["red_stems_in_box_count"]], dtype=np.float32)
+            obs["priv_state"]["green_stems_in_box_count"] = np.array([privileged_info["green_stems_in_box_count"]], dtype=np.float32)
             obs["priv_state"]["left_finger_contacts"] = np.array([privileged_info["left_finger_contacts"]], dtype=np.float32)
             obs["priv_state"]["right_finger_contacts"] = np.array([privileged_info["right_finger_contacts"]], dtype=np.float32)
             obs["priv_state"]["total_distractor_displacement"] = np.array([privileged_info["total_displacement"]], dtype=np.float32)
@@ -1194,16 +1237,21 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         good_grasp = privileged_info["good_grasp"]
         bad_grasp = privileged_info["bad_grasp"]
         collision_detected = privileged_info["collision_detected"]
+        red_stems_in_box_count = privileged_info["red_stems_in_box_count"]
+        green_stems_in_box_count = privileged_info["green_stems_in_box_count"]
+         
         
-        # Compute rewards using extracted info
+        ## Rewards
         r_red = - np.tanh(20 * min_red_dist) if min_red_dist != float('inf') else 0.0
         r_alignment = - np.tanh(60 * privileged_info["radial_dist"]) if min_red_dist != float('inf') else 0.0
-        r_in_box = float(privileged_info["stem_in_box"])
+        r_in_box = 1.0 if red_stems_in_box_count == 1 and green_stems_in_box_count == 0 else 0.0
+
+        
+        ## Penalties
+        r_green_in_box_penalty = -1.0 if green_stems_in_box_count > 0 else 0.0
         r_col = -1.0 if collision_detected else 0.0
-        
-        # Calculate distractor displacement reward
         r_dist = - np.tanh(5 * privileged_info["total_displacement"])
-        
+
         # Penalize large actions and large changes in actions (reduce shakiness)
         r_energy = -np.tanh(0.5*np.linalg.norm(action[:-1]))  # Exclude the grasp action
         r_smooth = -np.tanh(0.5*np.linalg.norm(action[:-1] - self.prev_action[:-1]))
@@ -1266,6 +1314,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                     'r_red': r_red, 
                     'r_alignment': r_alignment,
                     'r_in_box': r_in_box,
+                    'r_green_in_box_penalty': r_green_in_box_penalty,
                     'r_col': r_col, 
                     'r_dist': r_dist, 
                     'r_attempt_close': r_attempt_close, 
@@ -1277,6 +1326,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                             'r_red': 4.0, 
                             'r_alignment': 1.0,
                             'r_in_box': 1.0,
+                            'r_green_in_box_penalty': 1.0,
                             'r_col': 1.0, 
                             'r_dist': 1.0, 
                             'r_attempt_close': 0.0, 
