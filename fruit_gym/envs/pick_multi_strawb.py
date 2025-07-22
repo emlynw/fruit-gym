@@ -1235,7 +1235,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         ## Rewards
         r_red = - np.tanh(20 * min_red_dist) if min_red_dist != float('inf') else 0.0
         r_alignment = - np.tanh(60 * privileged_info["radial_dist"]) if min_red_dist != float('inf') else 0.0
-        r_in_box = 1.0 if red_stems_in_box_count == 1 and green_stems_in_box_count == 0 else 0.0
+        r_in_box = 0.0 if red_stems_in_box_count == 1 and green_stems_in_box_count == 0 else -1.0
 
         
         ## Penalties
