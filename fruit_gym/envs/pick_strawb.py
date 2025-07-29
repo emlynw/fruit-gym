@@ -207,19 +207,24 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             render_mode=self.render_mode,
             width=self.width,
             height=self.height, 
-            camera_id=0, 
             **kwargs,
         )
         self.model.opt.timestep = physics_dt
-        self.camera_id = ()
-        for cam in self.cameras:
-            self.camera_id += (self.model.camera(cam).id,)
         self.action_space = Box(
             np.array([-1.0]*(self.ee_dof+1)), 
             np.array([1.0]*(self.ee_dof+1)),
             dtype=np.float32,
         )
-        self._viewer = MujocoRenderer(self.model, self.data,)
+        self._viewers = {
+            cam: MujocoRenderer(
+                self.model,
+                self.data,
+                width=self.width,
+                height=self.height,
+                camera_name=cam,           # <‑‑ choose the camera here
+            )
+            for cam in self.cameras
+        }
         self.setup()
 
     def setup(self):
@@ -292,11 +297,11 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         # Target pos
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
-        target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
+        target_pos_noise = self.np_random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
         target_pos = self.default_obj_pos + target_pos_noise
         self.model.body_pos[self.model.body("vine1").id] = target_pos
         # Target orientation
-        random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)  # Random angle in radians
+        random_z_angle = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random angle in radians
         z_rotation = Rotation.from_euler('z', random_z_angle)
         new_rotation = z_rotation * self.initial_vine_rotation
         new_quat = new_rotation.as_quat()
@@ -311,7 +316,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             sub_geom_ids[name] = list(range(geom_start, geom_start + geom_count))
 
         if object_cfg.get("random_size"):
-            active_sub = np.random.choice(target_names)
+            active_sub = self.np_random.choice(target_names)
         else:
             active_sub = "block1"
         for name in target_names:
@@ -337,22 +342,22 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
         distractor_indices = list(range(2, self.num_green + 2))
         if object_cfg.get("random_count"):
-            active_count = np.random.randint(1, len(distractor_indices) + 1)
+            active_count = self.np_random.integers(1, len(distractor_indices) + 1)
         else:
             active_count = num_green
-        active_indices = np.random.choice(distractor_indices, size=active_count, replace=False)
+        active_indices = self.np_random.choice(distractor_indices, size=active_count, replace=False)
         self.active_indices = active_indices
 
         for i in distractor_indices:
             # Randomize the distractor vine's position.
-            distract_pos_noise = np.random.uniform(low=distract_pos_noise_low,
+            distract_pos_noise = self.np_random.uniform(low=distract_pos_noise_low,
                                                     high=distract_pos_noise_high,
                                                     size=3)
             vine_body = self.model.body(f"vine{i}")
             self.model.body_pos[vine_body.id] = target_pos + distract_pos_noise
 
             # Randomize its orientation.
-            random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)
+            random_z_angle = self.np_random.uniform(low=-np.pi, high=np.pi)
             z_rotation = Rotation.from_euler('z', random_z_angle)
             new_rotation = z_rotation * self.initial_vine_rotation
             new_quat = new_rotation.as_quat()
@@ -379,7 +384,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             else:
                 # Otherwise, ensure default collision settings are in place.
                 if object_cfg.get("random_size"):
-                    active_sub = np.random.choice(sub_names)
+                    active_sub = self.np_random.choice(sub_names)
                 else:
                     active_sub = f"block{i}"
                 for name in sub_names:
@@ -420,7 +425,16 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             floor_noise(self)
         if dr.get("objects", {}).get("enabled", False):
             self.object_noise()
-        self._viewer = MujocoRenderer(self.model, self.data)
+        self._viewers = {
+            cam: MujocoRenderer(
+                self.model,
+                self.data,
+                width=self.width,
+                height=self.height,
+                camera_name=cam,           # <‑‑ choose the camera here
+            )
+            for cam in self.cameras
+        }
 
 
     def reset_arm_and_gripper(self):
@@ -641,9 +655,9 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
     
     def render(self):
         rendered_frames = []
-        for cam_id in self.camera_id:
+        for camera in self.cameras:
             rendered_frames.append(
-                self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
+                self._viewers[camera].render("rgb_array")
             )
         return rendered_frames
     
@@ -675,8 +689,8 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         orientation_noise_std = self.cfg.get("ee_ori_noise", 0.005)  # e.g., small rotations in quaternion
         # Add Gaussian noise to position and orientation
         # if self.randomize_domain:
-        #     tcp_pose[:3] = tcp_pose[:3] + np.random.normal(0, position_noise_std, size=3)
-        #     tcp_pose[3:] = tcp_pose[3:] + np.random.normal(0, orientation_noise_std, size=4)
+        #     tcp_pose[:3] = tcp_pose[:3] + self.np_random.normal(0, position_noise_std, size=3)
+        #     tcp_pose[3:] = tcp_pose[3:] + self.np_random.normal(0, orientation_noise_std, size=4)
         #     tcp_pose[3:] /= np.linalg.norm(tcp_pose[3:])
         
         # Populate noisy observations
@@ -690,98 +704,12 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         if self.image_obs:
             obs["images"] = {}
             for cam_name in self.cameras:
-                cam_id = self.model.camera(cam_name).id
-                obs["images"][cam_name] = self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
+                obs["images"][cam_name] = self._viewers[cam_name].render(render_mode="rgb_array")
 
         if self.render_mode == "human":
             self._viewer.render(self.render_mode)
 
         return obs
-        
-    # def _compute_reward(self, action):
-    #     block1_pos = self.data.sensor("block1_pos").data
-    #     tcp_pos = self.data.sensor("long_pinch_pos").data
-    #     r_red =  -np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
-
-    #     red_distance = np.linalg.norm(block1_pos - self._block_init)
-    #     green_distance = 0
-    #     for i in self.distractor_displacements:
-    #         green_distance += np.linalg.norm(self.distractor_displacements[i] - self.data.sensor(f"block{i}_pos").data)
-
-    #     total_distance = red_distance + green_distance
-    #     r_dist = -np.tanh(5*np.sum(total_distance))
-
-    #     # Movement rewards
-    #     r_energy = -np.tanh(5*np.linalg.norm(action[:-1]))
-    #     r_smooth = -np.tanh(np.linalg.norm(action[:-1] - self.prev_action[:-1]) )
-    #     self.prev_action = action
-    #     # Gripper Penalty
-    #     if (self.last_gripper_pos > 0.9 and action[-1] > 0.5) or (self.last_gripper_pos < 0.1 and action[-1] < -0.5):
-    #         grasp_penalty = -1.0
-    #     else:
-    #         grasp_penalty = 0.0
-    #     self.last_gripper_pos = 2*self.data.qpos[8]/self._GRIPPER_HOME[0]
-        
-
-    #     # Check if gripper pads are in contact with the object
-    #     right_finger_contact_good = False
-    #     left_finger_contact_good = False
-    #     right_finger_contact_bad = False
-    #     left_finger_contact_bad = False
-    #     good_grasp = False
-    #     bad_grasp = False
-    #     r_green_col = 0
-
-    #     # Check collisions
-    #     for i in range(self.data.ncon):
-    #         geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
-    #         geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
-
-    #         if ("finger" in geom1_name) or ("finger" in geom2_name):
-    #             if ("block" in geom1_name) or (f"block" in geom2_name):
-    #                 r_green_col = -1.0
-
-    #         if geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
-    #             if geom1_name == "stem1" or geom2_name == "stem1":
-    #                 right_finger_contact_good = True
-    #             elif geom1_name == "aG3" or geom2_name == "aG3" or geom1_name == "left_finger_inner" or geom2_name == "left_finger_inner":
-    #                 pass
-    #             else:
-    #                 right_finger_contact_good = False
-    #                 right_finger_contact_bad = True
-    #         if geom1_name =="left_finger_inner" or geom2_name =="left_finger_inner":
-    #             if geom1_name == "stem1" or geom2_name == "stem1":
-    #                 left_finger_contact_good = True
-    #             elif geom1_name == "aG3" or geom2_name == "aG3" or geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
-    #                 pass
-    #             else:
-    #                 left_finger_contact_good = False
-    #                 left_finger_contact_bad = True
-    #         if right_finger_contact_good and left_finger_contact_good:
-    #             good_grasp = True
-    #         if right_finger_contact_bad and left_finger_contact_bad:
-    #             bad_grasp = True
-
-    #     if good_grasp and (np.linalg.norm(self.data.sensor("block1_pos").data - self._block_init) < 0.05):
-    #         r_grasp = 1.0
-    #         success = True
-    #     else:
-    #         r_grasp = 0.0
-    #         success = False
-    #     r_bad_grasp = -float(bad_grasp)
-        
-    #     info = {}
-    #     if self.reward_type == "dense":
-    #         rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_bad_grasp': r_bad_grasp, 'r_energy': r_energy, 'r_smooth': r_smooth, 'grasp_penalty': grasp_penalty}
-    #         reward_scales = {'r_grasp': 10.0, 'r_red': 4.0, 'r_green_col': 1.0, 'r_dist': 1.0, 'r_bad_grasp': 1.0, 'r_energy': 1.0, 'r_smooth': 1.0, 'grasp_penalty': 1.0}
-    #         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
-    #         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
-    #         info = rewards
-    #     elif self.reward_type == "sparse":
-    #         reward = float(success)
-
-    #     info['success'] = success
-    #     return reward, info
 
     def _compute_reward(self, action):
         block1_pos = self.data.sensor("block1_pos").data
@@ -857,55 +785,3 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
         info['success'] = success
         return reward, info
-    
-    # def _compute_reward(self, action):
-    #     # 18th Feb reward function
-    #     block1_pos = self.data.sensor("block1_pos").data
-    #     tcp_pos = self.data.sensor("long_pinch_pos").data
-    #     r_red = 1 - np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
-
-    #     green_distance = 0
-    #     for i in self.distractor_displacements:
-    #         green_distance += np.linalg.norm(self.distractor_displacements[i] - self.data.sensor(f"block{i}_pos").data)
-
-    #     r_dist = 1 - np.tanh(5*np.sum(green_distance))
-
-    #     # Movement rewards
-    #     r_energy = -np.linalg.norm(action)
-    #     r_smooth = -np.linalg.norm(action - self.prev_action) 
-    #     self.prev_action = action
-        
-        
-
-    #     # Check if gripper pads are in contact with the object
-    #     right_finger_contact = False
-    #     left_finger_contact = False
-    #     success = False
-    #     # Check collisions
-    #     for i in range(self.data.ncon):
-    #         geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
-    #         geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
-
-    #         if geom1_name == "right_finger_inner" or geom2_name == "right_finger_inner":
-    #             if geom1_name == "stem1" or geom2_name == "stem1":
-    #                 right_finger_contact = True
-    #         if geom1_name =="left_finger_inner" or geom2_name =="left_finger_inner":
-    #             if geom1_name == "stem1" or geom2_name == "stem1":
-    #                 left_finger_contact = True
-    #         if right_finger_contact and left_finger_contact:
-    #             success=True
-    #             break 
-    #     r_grasp = float(success)
-        
-    #     info = {}
-    #     if self.reward_type == "dense":
-    #         rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_dist': r_dist, 'r_energy': r_energy, 'r_smooth': r_smooth}
-    #         reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_dist': 1.0, 'r_energy': 2.0, 'r_smooth': 1.0}
-    #         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
-    #         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
-    #         info = rewards
-    #     elif self.reward_type == "sparse":
-    #         reward = float(success)
-
-    #     info['success'] = success
-    #     return reward, info

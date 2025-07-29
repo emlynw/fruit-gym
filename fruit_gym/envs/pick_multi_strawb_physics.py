@@ -240,20 +240,25 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
             render_mode=self.render_mode,
             width=self.width,
             height=self.height, 
-            camera_id=0, 
             **kwargs,
         )
         self.model.opt.timestep = physics_dt
-        self.camera_id = ()
-        if self.cameras is not None:
-            for cam in self.cameras:
-                self.camera_id += (self.model.camera(cam).id,)
+    
         self.action_space = Box(
             np.array([-1.0]*(self.ee_dof+1)), 
             np.array([1.0]*(self.ee_dof+1)),
             dtype=np.float32,
         )
-        self._viewer = MujocoRenderer(self.model, self.data,)
+        self._viewers = {
+            cam: MujocoRenderer(
+                self.model,
+                self.data,
+                width=self.width,
+                height=self.height,
+                camera_name=cam,           # <‑‑ choose the camera here
+            )
+            for cam in self.cameras
+        }
         self.setup()
 
     def setup(self):
@@ -342,7 +347,7 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
         if not object_cfg.get("enabled", False):
             return
         
-          # --- Store initial geom properties once, then restore them each call ---
+        # --- Store initial geom properties once, then restore them each call ---
         if not hasattr(self, '_initial_geom_properties_stored'):
             self._initial_geom_rgba = self.model.geom_rgba.copy()
             self._initial_geom_contype = self.model.geom_contype.copy()
@@ -359,11 +364,13 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
         # Target pos
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
-        target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
-        target_pos = self.default_obj_pos + target_pos_noise
+        target_pos_noise = self.np_random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
+        target_pos = self.data.sensor("pinch_pos").data.copy()
+        target_pos[0] += 0.15
+        target_pos[2] += 0.2
         self.model.body_pos[self.model.body("vine1").id] = target_pos
         # Target orientation
-        random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)  # Random angle in radians
+        random_z_angle = self.np_random.uniform(low=-np.pi, high=np.pi) # Random angle in radians
         z_rotation = Rotation.from_euler('z', random_z_angle)
         new_rotation = z_rotation * self.initial_vine_rotation
         new_quat = new_rotation.as_quat()
@@ -371,11 +378,14 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
 
         red_rgba = np.array([0.55, 0.1, 0.1, 1])
         green_rgba = np.array([0.5, 0.63, 0.45, 1])
-        self.red_blocks = [1]
+        
+        # `vine1` is always the primary target and is always red.
+        self.red_blocks = [1] 
         self.green_blocks = []
         self.red_positions = {}
         self.green_positions = {}
 
+        
         target_names = ["block1", "block1_big", "block1_small"]
         sub_geom_ids = {}
         for name in target_names:
@@ -384,7 +394,7 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
             geom_count = self.model.body_geomnum[sub_body.id]
             sub_geom_ids[name] = list(range(geom_start, geom_start + geom_count))
 
-        active_sub = np.random.choice(target_names)
+        active_sub = self.np_random.choice(target_names)
         for name in target_names:
             for geom_id in sub_geom_ids[name]:
                 geom_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
@@ -407,22 +417,49 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
         distract_pos_noise_high = object_cfg.get("distract_pos_noise_high", [0.0, 0.0, 0.0])
 
         distractor_indices = list(range(2, self.num_green + 2))
-        active_count = np.random.randint(1, len(distractor_indices) + 1)
-        active_indices = np.random.choice(distractor_indices, size=active_count, replace=False)
+        active_count = self.np_random.integers(4, len(distractor_indices) + 1)
+        active_indices = self.np_random.choice(distractor_indices, size=active_count, replace=False)
         self.active_indices = active_indices
+        self.active_visual_geoms = {}
+        
+        # 1. Define the desired TOTAL number of red strawberries.
+        min_total_red = 2
+        max_total_red_from_config = object_cfg.get("max_red_strawberries", 3)
+        
+        # 2. Since block1 is always red, we need to select (N-1) from the distractors.
+        #    The number of distractors to make red is in the range [min-1, max-1].
+        min_distractors_to_make_red = max(0, min_total_red - 1) # e.g., 2-1=1
+        max_distractors_to_make_red = max(0, max_total_red_from_config - 1) # e.g., 4-1=3
+        
+        # 3. Ensure the number to make doesn't exceed available active distractors.
+        effective_max = min(max_distractors_to_make_red, len(active_indices))
+        
+        # 4. Ensure the minimum is not greater than this effective max.
+        effective_min = min(min_distractors_to_make_red, effective_max)
+        
+        # 5. Determine how many distractors to color red for this episode.
+        num_distractors_to_make_red = 0
+        if effective_min <= effective_max:
+            num_distractors_to_make_red = self.np_random.integers(effective_min, effective_max + 1)
+        
+        # 6. Select the candidates from the active pool.
+        if num_distractors_to_make_red > 0:
+            red_candidate_indices = self.np_random.choice(active_indices, size=num_distractors_to_make_red, replace=False)
+        else:
+            red_candidate_indices = []
 
         for i in distractor_indices:
             vine_body_name = f"vine{i}"
             vine_body_id = self.model.body(vine_body_name).id
             # Randomize the distractor vine's position.
-            distract_pos_noise = np.random.uniform(low=distract_pos_noise_low,
-                                                    high=distract_pos_noise_high,
-                                                    size=3)
+            distract_pos_noise = self.np_random.uniform(low=distract_pos_noise_low,
+                                                high=distract_pos_noise_high,
+                                                size=3)
             vine_body = self.model.body(f"vine{i}")
             self.model.body_pos[vine_body.id] = target_pos + distract_pos_noise
 
             # Randomize its orientation.
-            random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)
+            random_z_angle = self.np_random.uniform(low=-np.pi, high=np.pi)
             z_rotation = Rotation.from_euler('z', random_z_angle)
             new_rotation = z_rotation * self.initial_vine_rotation
             new_quat = new_rotation.as_quat()
@@ -449,26 +486,28 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
                             self.model.geom_contype[geom_id] = 0
                             self.model.geom_conaffinity[geom_id] = 0
             else:
-                # Otherwise, ensure default collision settings are in place.
-                if np.random.rand() < 0.25:
+                # Assign color based on whether the index was chosen to be red
+                if i in red_candidate_indices:
                     chosen_rgba = red_rgba
                     colour = "red"
                 else:
                     chosen_rgba = green_rgba
                     colour = "green"
-                active_sub = np.random.choice(sub_names)
+                    
+                active_sub = self.np_random.choice(sub_names)
                 for name in sub_names:
                     for geom_id in sub_geom_ids[name]:
                         geom_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
-                        if name == active_sub:
-                            if geom_name == f"{name}_visual":
+                        if name == active_sub:                                       
+                            if geom_name == name:
                                 self.model.geom_rgba[geom_id] = chosen_rgba
+                                self.active_visual_geoms[i] = geom_id
+                                # This is where the lists are populated for the rest of the sim
                                 if colour == "red":
                                     self.red_blocks.append(i)
                                 elif colour == "green":
-                                    self.green_blocks.append(i)                                  
-                            if geom_name == name:
-                                self.model.geom_group[geom_id] = 3
+                                    self.green_blocks.append(i)                        
+                                self.model.geom_group[geom_id] = 0
                                 self.model.geom_contype[geom_id] = 1
                                 self.model.geom_conaffinity[geom_id] = 1
                             else:
@@ -497,7 +536,16 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
             initial_state_noise(self)
         if dr.get("objects", {}).get("enabled", False):
             self.object_noise()
-        self._viewer = MujocoRenderer(self.model, self.data)
+        self._viewers = {
+            cam: MujocoRenderer(
+                self.model,
+                self.data,
+                width=self.width,
+                height=self.height,
+                camera_name=cam,           # <‑‑ choose the camera here
+            )
+            for cam in self.cameras
+        }
 
     def reset_arm_and_gripper(self):
         self.data.qpos[self._panda_dof_ids] = self._PANDA_HOME
@@ -722,9 +770,9 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
     
     def render(self):
         rendered_frames = []
-        for cam_id in self.camera_id:
+        for camera in self.cameras:
             rendered_frames.append(
-                self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
+                self._viewers[camera].render("rgb_array")
             )
         return rendered_frames
     
@@ -758,11 +806,11 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
             # Noise for position
             # Use a default from cfg or a fallback value
             position_noise_std = self.cfg.get("domain_randomization", {}).get("ee_pos_noise_std", 0.005) 
-            tcp_world_pos += np.random.normal(0, position_noise_std, size=3)
+            tcp_world_pos += self.np_random.normal(0, position_noise_std, size=3)
             
             # Noise for orientation
             orientation_noise_std = self.cfg.get("domain_randomization", {}).get("ee_ori_noise_std", 0.005)
-            orientation_noise_axis_angle = np.random.normal(0, orientation_noise_std, size=3)
+            orientation_noise_axis_angle = self.np_random.normal(0, orientation_noise_std, size=3)
             small_rotation = Rotation.from_rotvec(orientation_noise_axis_angle)
             current_rotation = Rotation.from_quat(tcp_world_quat_xyzw) # Expects xyzw
             new_rotation = small_rotation * current_rotation
@@ -778,8 +826,7 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
         if self.image_obs:
             obs["images"] = {}
             for cam_name in self.cameras:
-                cam_id = self.model.camera(cam_name).id
-                obs["images"][cam_name] = self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
+                obs["images"][cam_name] = self._viewers[cam_name].render(render_mode="rgb_array")
         
         # --- State-based strawberry information ---
         if not self.image_obs or self.include_priveleged_obs:
@@ -857,7 +904,7 @@ class PickMultiStrawbPhysicsEnv(MujocoEnv, utils.EzPickle):
             obs["state"]["num_red_left"] = np.array([num_red_left], dtype=np.float32)
 
         if self.render_mode == "human":
-            self._viewer.render(self.render_mode)
+            self._viewers['wrist1'].render(self.render_mode)
 
         return obs
     
