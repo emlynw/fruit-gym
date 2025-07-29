@@ -21,7 +21,7 @@
   </asset>
 
   <worldbody>
-    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="floor"/>
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="floor" group="3"/>
   </worldbody>
 
   <include file="robot.xml"/>

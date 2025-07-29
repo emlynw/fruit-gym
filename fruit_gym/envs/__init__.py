@@ -1,3 +1,4 @@
 from fruit_gym.envs.pick_strawb import PickStrawbEnv
 from fruit_gym.envs.pick_multi_strawb import PickMultiStrawbEnv
 from fruit_gym.envs.pick_multi_strawb_physics import PickMultiStrawbPhysicsEnv
+from fruit_gym.envs.randomiser_test_env import RandomiserTestEnv
