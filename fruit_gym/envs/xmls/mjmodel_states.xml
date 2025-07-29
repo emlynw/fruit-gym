@@ -198,13 +198,13 @@
                 <site name="stem1_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block1" pos="0.0 0.001 0.0">
                   <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/>
-                  <geom name="block1" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block1" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block1_big" pos="0 -0.003 0">
-                  <geom name="block1_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block1_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block1_small" pos="0 0.003 0">
-                  <geom name="block1_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block1_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>
@@ -233,13 +233,13 @@
                 <site name="stem2_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block2" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
-                  <geom name="block2" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block2" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block2_big" pos="0 -0.003 0">
-                  <geom name="block2_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block2_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block2_small" pos="0 0.003 0">
-                  <geom name="block2_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block2_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>
@@ -269,13 +269,13 @@
                 <site name="stem3_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block3" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
-                  <geom name="block3" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block3" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block3_big" pos="0 -0.003 0">
-                  <geom name="block3_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block3_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block3_small" pos="0 0.003 0">
-                  <geom name="block3_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block3_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>
@@ -305,13 +305,13 @@
                 <site name="stem4_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block4" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
-                  <geom name="block4" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block4" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block4_big" pos="0 -0.003 0">
-                  <geom name="block4_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block4_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block4_small" pos="0 0.003 0">
-                  <geom name="block4_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block4_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>
@@ -341,13 +341,13 @@
                 <site name="stem5_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block5" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
-                  <geom name="block5" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block5" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block5_big" pos="0 -0.003 0">
-                  <geom name="block5_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block5_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block5_small" pos="0 0.003 0">
-                  <geom name="block5_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block5_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>
@@ -377,13 +377,13 @@
                 <site name="stem6_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block6" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
-                  <geom name="block6" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block6" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block6_big" pos="0 -0.003 0">
-                  <geom name="block6_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block6_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block6_small" pos="0 0.003 0">
-                  <geom name="block6_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block6_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>
@@ -413,13 +413,13 @@
                 <site name="stem7_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block7" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
-                  <geom name="block7" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block7" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block7_big" pos="0 -0.003 0">
-                  <geom name="block7_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block7_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block7_small" pos="0 0.003 0">
-                  <geom name="block7_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block7_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>
@@ -449,13 +449,13 @@
                 <site name="stem8_grasp" pos="0.0001 0.041 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
                 <body name="block8" pos="0.0 0.001 0.0">
                   <!-- <site type="box" pos="0 0.015 0" size="0.015 0.02 0.015" group="3" rgba="0 1 0 0.2"/> -->
-                  <geom name="block8" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block8" type="mesh" mesh="strawberry_collision" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block8_big" pos="0 -0.003 0">
-                  <geom name="block8_big" type="mesh" mesh="strawberry_collision_big" density="400" group="3"/>
+                  <geom name="block8_big" type="mesh" mesh="strawberry_collision_big" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
                 <body name="block8_small" pos="0 0.003 0">
-                  <geom name="block8_small" type="mesh" mesh="strawberry_collision_small" density="400" group="3"/>
+                  <geom name="block8_small" type="mesh" mesh="strawberry_collision_small" density="400" rgba="0.5 0.63 0.45 1"/>
                 </body>
               </body>
             </body>

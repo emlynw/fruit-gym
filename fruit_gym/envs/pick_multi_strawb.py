@@ -283,19 +283,25 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             render_mode=self.render_mode,
             width=self.width,
             height=self.height, 
-            camera_id=0, 
             **kwargs,
         )
         self.model.opt.timestep = physics_dt
-        self.camera_id = ()
-        for cam in self.cameras:
-            self.camera_id += (self.model.camera(cam).id,)
+
         self.action_space = Box(
             np.array([-1.0]*(self.ee_dof+1)), 
             np.array([1.0]*(self.ee_dof+1)),
             dtype=np.float32,
         )
-        self._viewer = MujocoRenderer(self.model, self.data,)
+        self._viewers = {
+            cam: MujocoRenderer(
+                self.model,
+                self.data,
+                width=self.width,
+                height=self.height,
+                camera_name=cam,           # <‑‑ choose the camera here
+            )
+            for cam in self.cameras
+        }
         self.setup()
 
     def setup(self):
@@ -399,13 +405,13 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         # Target pos
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
-        target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
+        target_pos_noise = self.np_random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
         target_pos = self.data.sensor("pinch_pos").data.copy()
         target_pos[0] += 0.15
         target_pos[2] += 0.2
         self.model.body_pos[self.model.body("vine1").id] = target_pos
         # Target orientation
-        random_z_angle = np.random.uniform(low=-np.pi, high=np.pi) # Random angle in radians
+        random_z_angle = self.np_random.uniform(low=-np.pi, high=np.pi) # Random angle in radians
         z_rotation = Rotation.from_euler('z', random_z_angle)
         new_rotation = z_rotation * self.initial_vine_rotation
         new_quat = new_rotation.as_quat()
@@ -429,7 +435,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             geom_count = self.model.body_geomnum[sub_body.id]
             sub_geom_ids[name] = list(range(geom_start, geom_start + geom_count))
 
-        active_sub = np.random.choice(target_names)
+        active_sub = self.np_random.choice(target_names)
         for name in target_names:
             for geom_id in sub_geom_ids[name]:
                 geom_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
@@ -452,8 +458,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         distract_pos_noise_high = object_cfg.get("distract_pos_noise_high", [0.0, 0.0, 0.0])
 
         distractor_indices = list(range(2, self.num_green + 2))
-        active_count = np.random.randint(4, len(distractor_indices) + 1)
-        active_indices = np.random.choice(distractor_indices, size=active_count, replace=False)
+        active_count = self.np_random.integers(4, len(distractor_indices) + 1)
+        active_indices = self.np_random.choice(distractor_indices, size=active_count, replace=False)
         self.active_indices = active_indices
         self.active_visual_geoms = {}
         
@@ -475,11 +481,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         # 5. Determine how many distractors to color red for this episode.
         num_distractors_to_make_red = 0
         if effective_min <= effective_max:
-            num_distractors_to_make_red = np.random.randint(effective_min, effective_max + 1)
+            num_distractors_to_make_red = self.np_random.integers(effective_min, effective_max + 1)
         
         # 6. Select the candidates from the active pool.
         if num_distractors_to_make_red > 0:
-            red_candidate_indices = np.random.choice(active_indices, size=num_distractors_to_make_red, replace=False)
+            red_candidate_indices = self.np_random.choice(active_indices, size=num_distractors_to_make_red, replace=False)
         else:
             red_candidate_indices = []
 
@@ -487,14 +493,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             vine_body_name = f"vine{i}"
             vine_body_id = self.model.body(vine_body_name).id
             # Randomize the distractor vine's position.
-            distract_pos_noise = np.random.uniform(low=distract_pos_noise_low,
+            distract_pos_noise = self.np_random.uniform(low=distract_pos_noise_low,
                                                 high=distract_pos_noise_high,
                                                 size=3)
             vine_body = self.model.body(f"vine{i}")
             self.model.body_pos[vine_body.id] = target_pos + distract_pos_noise
 
             # Randomize its orientation.
-            random_z_angle = np.random.uniform(low=-np.pi, high=np.pi)
+            random_z_angle = self.np_random.uniform(low=-np.pi, high=np.pi)
             z_rotation = Rotation.from_euler('z', random_z_angle)
             new_rotation = z_rotation * self.initial_vine_rotation
             new_quat = new_rotation.as_quat()
@@ -529,7 +535,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                     chosen_rgba = green_rgba
                     colour = "green"
                     
-                active_sub = np.random.choice(sub_names)
+                active_sub = self.np_random.choice(sub_names)
                 for name in sub_names:
                     for geom_id in sub_geom_ids[name]:
                         geom_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
@@ -580,7 +586,16 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             skybox_noise(self)
         if dr.get("floor", {}).get("enabled", False):
             floor_noise(self)
-        self._viewer = MujocoRenderer(self.model, self.data)
+        self._viewers = {
+            cam: MujocoRenderer(
+                self.model,
+                self.data,
+                width=self.width,
+                height=self.height,
+                camera_name=cam,           # <‑‑ choose the camera here
+            )
+            for cam in self.cameras
+        }
 
     def reset_arm_and_gripper(self):
         self.data.qpos[self._panda_dof_ids] = self._PANDA_HOME
@@ -775,9 +790,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
     
     def render(self):
         rendered_frames = []
-        for cam_id in self.camera_id:
+        for camera in self.cameras:
             rendered_frames.append(
-                self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
+                self._viewers[camera].render("rgb_array")
             )
         return rendered_frames
     
@@ -1170,11 +1185,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             # Noise for position
             # Use a default from cfg or a fallback value
             position_noise_std = self.cfg.get("domain_randomization", {}).get("ee_pos_noise_std", 0.005) 
-            tcp_world_pos += np.random.normal(0, position_noise_std, size=3)
+            tcp_world_pos += self.np_random.normal(0, position_noise_std, size=3)
             
             # Noise for orientation
             orientation_noise_std = self.cfg.get("domain_randomization", {}).get("ee_ori_noise_std", 0.005)
-            orientation_noise_axis_angle = np.random.normal(0, orientation_noise_std, size=3)
+            orientation_noise_axis_angle = self.np_random.normal(0, orientation_noise_std, size=3)
             small_rotation = Rotation.from_rotvec(orientation_noise_axis_angle)
             current_rotation = Rotation.from_quat(tcp_world_quat_xyzw) # Expects xyzw
             new_rotation = small_rotation * current_rotation
@@ -1206,15 +1221,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         if self.image_obs:
             obs["images"] = {}
             for cam_name in self.cameras:
-                cam_id = self.model.camera(cam_name).id
-                obs["images"][cam_name] = self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
+                obs["images"][cam_name] = self._viewers[cam_name].render(render_mode="rgb_array")
 
         if not self.image_obs:
             strawberry_state_obs = self._get_strawberry_state_obs(tcp_world_pos)
             obs["state"].update(strawberry_state_obs)
         
         if self.render_mode == "human":
-            self._viewer.render(self.render_mode)
+            self._viewers['wrist1'].render(self.render_mode)
 
         return obs
 

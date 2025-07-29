@@ -22,7 +22,8 @@ def mouse_callback(event, x, y, flags, param):
 def main():
     # --- Configuration ---
     record = False
-    num_envs = 32  # Number of parallel environments (Recommend >= 2)
+    num_envs = 12  # Number of parallel environments (Recommend >= 2)
+    seed_list = np.random.randint(0, 2**32 - 1, size=num_envs).tolist()
     camera_res = 480
     video_res = 480
     cameras = ['wrist1', 'wrist2']
@@ -59,7 +60,6 @@ def main():
         vector_kwargs={},
         randomize_domain=True,
         cameras=cameras,
-        include_priveleged_obs=True,
         reward_type="dense",
         ee_dof=4,
         width=camera_res,
