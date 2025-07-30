@@ -22,6 +22,13 @@
 
   <worldbody>
     <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="floor" group="3"/>
+    <body name="light0" pos="0.3 0 1.6">
+      <light pos="0 0 0" dir="0 0 -1" ambient="0.1 0.1 0.1" diffuse="0.2 0.2 0.2"/>
+    </body>
+
+    <body name="target" pos="0.15 0 0.5" quat="1 0 0 0" mocap="true">
+      <geom name="target" size="0.03 0.03 0.03" type="box" contype="0" conaffinity="0" rgba="0.6 0.3 0.3 0"/>
+    </body>
   </worldbody>
 
   <include file="robot.xml"/>

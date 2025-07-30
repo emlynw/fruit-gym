@@ -17,7 +17,8 @@ import cv2
 import mujoco
 import numpy as np
 import psutil
-from PIL import Image                     # <-- new import
+from PIL import Image    
+import gc                 # <-- new import
 
 
 from PIL import Image
@@ -136,17 +137,17 @@ def skybox_texture_id(model: mujoco.MjModel) -> int | None:
 #  Other helpers (unchanged)                                                   #
 # --------------------------------------------------------------------------- #
 def randomise_mesh_scale_in_spec(spec: mujoco.MjSpec, prefixes: Sequence[str]):
-    factor = np.random.uniform(0.5, 2.0)
-    print(f"\n[Scale] ×{factor:.3f}")
+    scale = np.random.uniform(0.9, 1.1, size=3)
+    print(f"\n[Scale] ×{scale}")
     for mesh in spec.meshes:
         if any(mesh.name.startswith(p) for p in prefixes):
             if mesh.scale is None:
                 mesh.scale = np.ones(3)
-            mesh.scale *= factor
+            mesh.scale = scale
             print(f"  {mesh.name}: {np.round(mesh.scale, 3)}")
 
 
-def randomise_vine_positions(model: mujoco.MjModel, vine_ids: np.ndarray):
+def randomise_vine_positions(model: mujoco.MjModel, spec: mujoco.MjSpec, vine_ids: np.ndarray):
     lo = np.array([0.00, -1.0, 0.4])
     hi = np.array([1.00,  1.0, 0.8])
     new_pos = np.random.uniform(lo, hi, (len(vine_ids), 3))
@@ -154,6 +155,13 @@ def randomise_vine_positions(model: mujoco.MjModel, vine_ids: np.ndarray):
     for bid, pos in zip(vine_ids, new_pos):
         name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, bid)
         print(f"  {name}: {np.round(pos, 3)}")
+        # Update the spec as well
+        for body_spec in spec.worldbody.bodies:
+            if body_spec.name == name:
+                body_spec.pos = pos.tolist()
+                break
+
+
 
 
 def move_unique_assets(dest: mujoco.MjSpec, src: mujoco.MjSpec):
@@ -201,30 +209,6 @@ def main():
     if tex_id is None:
         print("Warning: model has no skybox texture; B key disabled.")
 
-
-    grid_raw  = spec.textures[0].gridlayout   # whatever the binding returns
-    print("initial grid layout start")
-    for c in grid_raw:
-        print(c)
-    print("initial gridlayout end")
-    print(f"initial gridsize: {spec.textures[0].gridsize}")
-
-    print(f"initial cubefiles start:")
-    for i, f in enumerate(spec.textures[0].cubefiles):
-        print(f"{i}: {f}")
-    print("initial cubefiles end")
-
-
-    print(F"initial texture height: {spec.textures[0].height}")
-    print(F"initial texture width: {spec.textures[0].width}")
-    print(f"initial texture filename: {spec.textures[0].file}")
-    print(f"initial content type: {spec.textures[tex_id].content_type}")
-
-
-    placeholder_height = model.tex_height[0]
-    placeholder_width = model.tex_width[0]
-    print(f"Placeholder texture size: {placeholder_width}x{placeholder_height}")
-
     vine_ids = np.array([model.body(n).id for n in root_names])
     strawberry_prefixes = ["strawberry", "strawberry_leaves", "strawberry_collision"]
 
@@ -232,7 +216,7 @@ def main():
     cam = mujoco.MjvCamera()
     mujoco.mjv_defaultCamera(cam)
     cam.lookat[:] = (0.0, 0.0, 0.6)
-    cam.distance  = 1.0
+    cam.distance  = 3.0
     cam.elevation = 0
     cam.azimuth   = 0
 
@@ -242,9 +226,9 @@ def main():
     try:
         i = 0 
         while True:
-            # cam.azimuth += 0.2
+            cam.azimuth += 0.2
             # cam.elevation = 1000 * np.sin(i)
-            cam.elevation += 0.2
+            # cam.elevation += 0.2
             t0 = time.time()
             mujoco.mj_step(model, data)
 
@@ -264,11 +248,15 @@ def main():
             elif key == ord("s"):
                 randomise_mesh_scale_in_spec(spec, strawberry_prefixes)
                 model, data = spec.recompile(model, data)
-                renderer.close(); renderer = mujoco.Renderer(model, 480, 480)
+                old_model, old_data = model, data
+                renderer.close()
+                del renderer, old_model, old_data
+                gc.collect()
+                renderer = mujoco.Renderer(model, 480, 480)
                 tex_id = skybox_texture_id(model)  # id may change after compile
 
             elif key == ord("p"):
-                randomise_vine_positions(model, vine_ids)
+                randomise_vine_positions(model, spec, vine_ids)
                 mujoco.mj_forward(model, data)
 
             elif key == ord("b") and sky_pool and tex_id is not None:
@@ -276,22 +264,6 @@ def main():
                 apply_texture(model, renderer._mjr_context,
                               tex_id, texture)
                 grid_raw  = spec.textures[tex_id].gridlayout   # whatever the binding returns
-
-                print("grid layout start")
-                for c in grid_raw:
-                    print(c)
-                print("gridlayout end") # e.g. "..LRFBU...."
-                print(f"gridsize: {spec.textures[0].gridsize}")
-                print(f"texture height: {spec.textures[0].height}")
-                print(f"texture width: {spec.textures[0].width}")
-                print(f"cubefiles start:")
-                for i, f in enumerate(spec.textures[tex_id].cubefiles):
-                    print(f"{i}: {f}")
-                print("cubefiles end")
-                print(f"content type: {spec.textures[tex_id].content_type}")
-
-
-
 
             # real‑time pacing
             dt = model.opt.timestep - (time.time() - t0)
