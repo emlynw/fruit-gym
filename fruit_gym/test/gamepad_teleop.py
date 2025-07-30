@@ -20,8 +20,10 @@ def main():
     dir = os.path.dirname(__file__)
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
+    reward_type = "sparse"
+    ee_dof = 6
 
-    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, discrete_gripper=False,reward_type="dense", ee_dof=6, width=camera_res, height=camera_res, gripper_pause=False)
+    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, discrete_gripper=False,reward_type=reward_type, ee_dof=ee_dof, width=camera_res, height=camera_res, gripper_pause=False)
     env = TimeLimit(env, max_episode_steps=250)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
@@ -62,7 +64,9 @@ def main():
                 cv2.putText(frame, f"Energy: {info['r_energy']:.2f}", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(frame, f"Smoothness: {info['r_smooth']:.2f}", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(frame, f"collision: {info['r_col']:.2f}", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"displacement: {info['r_dist']:.2f}", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)                   
+                cv2.putText(frame, f"displacement: {info['r_dist']:.2f}", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)     
+                if reward_type == "sparse":
+                    cv2.putText(frame, f"Dense Reward: {info['dense_reward']:.2f}", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)              
 
                 cv2.imshow(camera, frame)
                 cv2.waitKey(waitkey)

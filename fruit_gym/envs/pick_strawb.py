@@ -631,6 +631,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         # Reward
         reward, info = self._compute_reward(action)
         if info['success'] == True and self.reward_type == "sparse":
+            info['dense_reward'] = reward
             reward = 1.0
             terminated = True
         else:
@@ -761,14 +762,12 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
             success = False
         
         info = {}
-        if self.reward_type == "dense":
-            rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_energy': r_energy, 'r_smooth': r_smooth}
-            reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_green_col': 0.5, 'r_dist': 1.0, 'r_energy': 2.0, 'r_smooth': 1.0}
-            rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
-            reward = np.clip(sum(rewards.values()), -1e4, 1e4)
-            info = rewards
-        elif self.reward_type == "sparse":
-            reward = float(success)
+    
+        rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_green_col': r_green_col, 'r_dist': r_dist, 'r_energy': r_energy, 'r_smooth': r_smooth}
+        reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_green_col': 0.5, 'r_dist': 1.0, 'r_energy': 2.0, 'r_smooth': 1.0}
+        rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
+        reward = np.clip(sum(rewards.values()), -1e4, 1e4)
+        info = rewards
 
         info['success'] = success
         return reward, info

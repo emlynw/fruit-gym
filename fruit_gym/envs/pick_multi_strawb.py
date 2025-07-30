@@ -765,6 +765,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         # Reward
         reward, info = self._compute_reward(action)
+        if self.reward_type == "sparse":
+            info['dense_reward'] = reward
+            reward = float(info['success'])
         if info['success'] == True:
             terminated = True
         else:
@@ -1300,36 +1303,34 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         else:
             completed = False
         info = {}
-        if self.reward_type == "dense":
-            rewards = {'r_grasp': r_grasp, 
-                    'r_red': r_red, 
-                    'r_alignment': r_alignment,
-                    'r_in_box': r_in_box,
-                    'r_green_in_box_penalty': r_green_in_box_penalty,
-                    'r_col': r_col, 
-                    'r_dist': r_dist, 
-                    'r_attempt_close': r_attempt_close, 
-                    'r_bad_grasp': r_bad_grasp, 
-                    'r_energy': r_energy, 
-                    'r_smooth': r_smooth,
-                    'r_alive': r_alive}
-            reward_scales = {'r_grasp': 100.0, 
-                            'r_red': 4.0, 
-                            'r_alignment': 1.0,
-                            'r_in_box': 1.0,
-                            'r_green_in_box_penalty': 1.0,
-                            'r_col': 1.0, 
-                            'r_dist': 1.0, 
-                            'r_attempt_close': 2.0, 
-                            'r_bad_grasp': 0.0, 
-                            'r_energy': 1.0, 
-                            'r_smooth': 1.0,
-                            'r_alive': 0.0}
-            rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
-            reward = np.clip(sum(rewards.values()), -1e4, 1e4)
-            info = rewards
-        elif self.reward_type == "sparse":
-            reward = float(completed)
+        
+        rewards = {'r_grasp': r_grasp, 
+                'r_red': r_red, 
+                'r_alignment': r_alignment,
+                'r_in_box': r_in_box,
+                'r_green_in_box_penalty': r_green_in_box_penalty,
+                'r_col': r_col, 
+                'r_dist': r_dist, 
+                'r_attempt_close': r_attempt_close, 
+                'r_bad_grasp': r_bad_grasp, 
+                'r_energy': r_energy, 
+                'r_smooth': r_smooth,
+                'r_alive': r_alive}
+        reward_scales = {'r_grasp': 100.0, 
+                        'r_red': 4.0, 
+                        'r_alignment': 1.0,
+                        'r_in_box': 1.0,
+                        'r_green_in_box_penalty': 1.0,
+                        'r_col': 1.0, 
+                        'r_dist': 1.0, 
+                        'r_attempt_close': 2.0, 
+                        'r_bad_grasp': 0.0, 
+                        'r_energy': 1.0, 
+                        'r_smooth': 1.0,
+                        'r_alive': 0.0}
+        rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
+        reward = np.clip(sum(rewards.values()), -1e4, 1e4)
+        info = rewards
 
         info['success'] = completed
         return reward, info
