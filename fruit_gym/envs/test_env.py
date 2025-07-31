@@ -11,9 +11,8 @@ from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from gymnasium.spaces import Box, Dict
 from scipy.spatial.transform import Rotation
 from fruit_gym.controllers.opspace import opspace
-from fruit_gym.randomisers import Randomiser  
+from fruit_gym.randomisers.factory import build_randomisers
 import copy
-
 
 def load_config(config_path):
     with open(config_path, 'r') as config_file:
@@ -48,6 +47,12 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         **kwargs,
     ):
         utils.EzPickle.__init__(self, image_obs=image_obs, **kwargs)
+        p = Path(__file__).parent
+        self.xml_path = os.path.join(p, "xmls")
+        scene_path = os.path.join(self.xml_path, "scene.xml")
+        self.scene_path = scene_path
+        self._n_substeps = int(float(control_dt) / float(physics_dt))
+        self.frame_skip = 1
 
         if cameras is None:
             cameras = ["wrist1", "wrist2"]
@@ -75,11 +80,13 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         self.default_obj_pos = np.array([0.42, 0, 0.85])
         self.gripper_sleep = 0.6
         self.grasp_threshold = 0.333
-        MAX_OBSERVABLE_STRAWBERRIES = 8
 
         if config_path is None:
-            config_path = Path(__file__).parent.parent / "configs" / "strawb_hanging.yaml"
+            config_path = Path(__file__).parent.parent / "configs" / "multi_strawb.yaml"
         self.cfg = load_config(config_path)
+
+        # Load the domain randomization configuration
+        self._randomisers = build_randomisers(self.cfg, xml_dir=self.xml_path)
 
         # Define the basic state space components
         state_space_dict = {
@@ -100,14 +107,9 @@ class TestEnv(MujocoEnv, utils.EzPickle):
                     0, 255, shape=(self.height, self.width, 3), dtype=np.uint8
                 )
 
-        p = Path(__file__).parent
-        env_dir = os.path.join(p, "xmls/scene.xml")
-        self._n_substeps = int(float(control_dt) / float(physics_dt))
-        self.frame_skip = 1
-
         MujocoEnv.__init__(
             self, 
-            env_dir, 
+            scene_path, 
             self.frame_skip, 
             observation_space=self.observation_space, 
             render_mode=self.render_mode,
@@ -135,12 +137,10 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         self.setup()
 
     def _initialize_simulation(self):
-        """
-        Overrides MujocoEnv’s default XML loader.
-        Compile the (possibly un‑randomised) *base* spec and hand it back.
-        """
-        self.spec = copy.deepcopy(self._base_spec)
-        model = self.spec.compile()
+        """Parent calls this; build model from XML path (no spec editing here)."""
+        self._base_spec = mujoco.MjSpec.from_file(self.scene_path)
+        self._mj_spec = self._base_spec.copy()
+        model = self._base_spec.compile()
         model.vis.global_.offwidth = self.width
         model.vis.global_.offheight = self.height
         data = mujoco.MjData(model)
@@ -250,13 +250,37 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         attempt = 0
         while True:
             attempt += 1
+            self._mj_spec = self._base_spec.copy()
+
+            viewer = self.mujoco_renderer._get_viewer("rgb_array")
+            ctx = viewer.con
+
+             # -------- first pass: spec randomisers --------
+            for r in self._randomisers:
+                if r.affects_spec:
+                    r.apply(spec=self._mj_spec, model=None, data=None, rng=self.np_random, ctx=ctx)
+
+            # re-compile
+            self.model = self._mj_spec.compile()
+            self.data = mujoco.MjData(self.model)
             self.reset_arm_and_gripper()
 
-            needs_recompile = False
-            if self.randomize_domain:
-                for r in self._randomisers:
-                    r.apply(spec=self.spec if r.affects_spec else None,
-                    model=self.model, data=self.data, rng=self._rng)
+
+            # -------- second pass: model/data randomisers --------
+            for r in self._randomisers:
+                if not r.affects_spec:
+                    r.apply(spec=None, model=self.model, data=self.data, rng=self.np_random, ctx=ctx)
+
+            self._viewers = {
+            cam: MujocoRenderer(
+                self.model,
+                self.data,
+                width=self.width,
+                height=self.height,
+                camera_name=cam,           # <‑‑ choose the camera here
+            )
+            for cam in self.cameras
+            }
 
             self.data.qvel[:] = 0
             self.data.qacc[:] = 0

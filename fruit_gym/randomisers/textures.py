@@ -3,9 +3,7 @@ from pathlib import Path
 from PIL import Image
 import mujoco
 import numpy as np
-from typing import Protocol, Sequence, Optional
-
-
+from typing import Optional
 
 SKYBOX_EXTS: set[str] = {".png", ".jpg", ".jpeg"}
 
@@ -94,17 +92,18 @@ class SkyboxRandomiser(Randomiser):
     """Swap the skybox texture with a random file from *skybox_dir*."""
 
     affects_spec = False  # in‑place OpenGL upload
-
+    needs_ctx = True  # requires a MjrContext for texture upload
+    
     def __init__(self, skybox_dir: Path):
         self._skyboxes = find_skybox_images(skybox_dir)
         if not self._skyboxes:
             print(f"[Skybox] No images found in {skybox_dir}; randomiser disabled.")
 
-    def apply(self, *, spec, model, data, rng):
+    def apply(self, *, spec, model, data, rng, ctx=None):
         if not self._skyboxes:
             return
         tex_id = skybox_texture_id(model)
         if tex_id is None:
             return
         path = rng.choice(self._skyboxes)
-        upload_skybox_texture(model, mujoco.MjrContext(model), tex_id=tex_id, path=path)
+        upload_skybox_texture(model, ctx, tex_id=tex_id, path=path)

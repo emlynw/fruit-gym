@@ -35,7 +35,9 @@ def main():
     for episode in range(num_episodes):
         terminated = False
         truncated = False
+        reset_time = time.time()
         obs, info = env.reset()
+        print(f"reset took {time.time() - reset_time:.4f} seconds")
 
         # Display and record the initial frame for each camera.
         print(f"Press any key to start episode {episode}")

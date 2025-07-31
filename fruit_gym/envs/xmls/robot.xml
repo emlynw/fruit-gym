@@ -268,8 +268,8 @@
                           <joint name="finger_joint1" class="finger" pos="0 0 0" axis="0 1 0"/>
                           <geom class="visual" material="off_white" mesh="finger_0"/>
                           <geom class="collision" mesh="finger_0"/>
-                          <geom name="left_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.01 0.5"/>
-                          <geom name="left_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.01 0.5"/>
+                          <geom name="left_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
+                          <geom name="left_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
                           <geom class="visual" material="black" mesh="gripper_long"/>
                           <site name="left_pinch" pos="0 0 0.0835" size="0.001" group="3" rgba="1 0 0 1"/>
                         </body>
@@ -278,8 +278,8 @@
                           <joint name="finger_joint2" class="finger" pos="0 0 0" axis="0 1 0"/>
                           <geom class="visual" material="off_white" mesh="finger_0"/>
                           <geom class="collision" mesh="finger_0"/>
-                          <geom name="right_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.01 0.5"/>
-                          <geom name="right_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.01 0.5" group="4"/>
+                          <geom name="right_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
+                          <geom name="right_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" group="4"/>
                           <geom class="visual" material="black" mesh="gripper_long"/>
                           <site name="right_pinch" pos="0 0 0.0835" size="0.001" group="3" rgba="1 0 0 1"/>
                           <!-- <site name="finger_top"         pos="0.009 0. 0.0835" size="0.002" group="3" rgba="1 0 0 1"/>
@@ -326,4 +326,8 @@
     <framequat objtype="site" objname="long_pinch" name="long_pinch_quat"/>
     <framelinvel objtype="site" objname="long_pinch" name="long_pinch_vel"/>
   </sensor>
+
+  <!-- <keyframe>
+      <key name="home" qpos="0    -1.6   0   -2.54   -0.05   2.49   0.822   0.0141   0.0141"/>
+  </keyframe> -->
 </mujoco>

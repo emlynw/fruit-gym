@@ -1,6 +1,4 @@
 from .base import Randomiser
-from pathlib import Path
-import mujoco
 import numpy as np
 from typing import Sequence, Optional
 
@@ -9,6 +7,7 @@ class LightingRandomiser(Randomiser):
     """Randomise a single movable light plus the global headlight."""
 
     affects_spec = False
+    needs_ctx = False  # does not need a MjrContext
 
     def __init__(self,
                  pos_range_low: Sequence[float] = (-0.8, -0.5, -0.05),
@@ -22,9 +21,9 @@ class LightingRandomiser(Randomiser):
         self.ambient_rng = ambient_range
         self.specular_rng = specular_range
 
-    def apply(self, *, spec, model, data, rng):
+    def apply(self, *, spec, model, data, rng, ctx=None):
         # move light0 (assumed to exist)
-        light_bid = model.body("light0").id if "light0" in model._body_name2id else None
+        light_bid = model.body("light0").id
         if light_bid is not None:
             model.body_pos[light_bid] = rng.uniform(self.pos_low, self.pos_high)
 
