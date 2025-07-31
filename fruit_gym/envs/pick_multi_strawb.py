@@ -767,7 +767,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         reward, info = self._compute_reward(action)
         if self.reward_type == "sparse":
             info['dense_reward'] = reward
-            reward = float(info['success'])
+            if info['r_grasp'] > 0:
+                reward = 1.0
+            else:
+                reward = 0.0
         if info['success'] == True:
             terminated = True
         else:
