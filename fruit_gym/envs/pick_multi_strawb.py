@@ -11,6 +11,7 @@ from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from gymnasium.spaces import Box, Dict
 from scipy.spatial.transform import Rotation
 from fruit_gym.controllers.opspace import opspace
+import gc
 from fruit_gym.envs.randomization import (
     lighting_noise,
     action_scale_noise,
@@ -272,7 +273,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 )
 
         p = Path(__file__).parent
-        env_dir = os.path.join(p, "xmls/mjmodel.xml")
+        env_dir = os.path.join(p, "xmls/mjmodel_spheres.xml")
         self._n_substeps = int(float(control_dt) / float(physics_dt))
         self.frame_skip = 1
 

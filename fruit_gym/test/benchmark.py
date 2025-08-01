@@ -12,11 +12,11 @@ def benchmark_env():
     Benchmark script that runs 20 episodes and measures timing performance.
     """
     # Configuration
-    num_episodes = 20
+    num_episodes = 5
     camera_res = 480
     cameras = ['wrist1', 'wrist2']
     proprio_keys = None
-    max_episode_steps = 500
+    max_episode_steps = 100
     
     # Disable video recording for benchmarking
     record = False
@@ -65,6 +65,7 @@ def benchmark_env():
             truncated = False
             episode_reward = 0
             episode_steps = 0
+            i = 0
             
             print(f"Episode {episode + 1}/{num_episodes} - Reset time: {reset_time:.4f}s")
             
@@ -73,11 +74,20 @@ def benchmark_env():
                 
                 # Generate random action for benchmarking
                 # Format: [forward/back, left/right, up/down, rotation, gripper]
-                action = np.random.uniform(-0.5, 0.5, 5)
-                action[-1] = np.random.choice([-1.0, 0.0, 1.0])  # Discrete gripper action
-                
+                if i < 40:
+                    action = np.array([1.0, 0.0, 0.0, 0.0, 0.0])
+                else:
+                    action = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
+                    if i % 20 == 0:
+                        current_y = np.random.choice([1.0, -1.0])
+                    action[1] = current_y
+                    action[-1] = np.random.choice([-1.0, 0.0, 1.0])
+                i += 1
+
                 # Execute step
                 obs, reward, terminated, truncated, info = env.step(action)
+                # cv2.imshow("wrist1", obs['wrist1'])
+                # cv2.waitKey(1)  # Allow OpenCV to update the window
                 
                 step_time = time.time() - step_start
                 step_times.append(step_time)
