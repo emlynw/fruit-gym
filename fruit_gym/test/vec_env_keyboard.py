@@ -22,7 +22,7 @@ def mouse_callback(event, x, y, flags, param):
 def main():
     # --- Configuration ---
     record = False
-    num_envs = 32  # Number of parallel environments (Recommend >= 2)
+    num_envs = 5  # Number of parallel environments (Recommend >= 2)
     camera_res = 480
     video_res = 480
     cameras = ['wrist1', 'wrist2']
@@ -53,13 +53,12 @@ def main():
 
     # --- Vectorized Environment Creation ---
     envs = gym.make_vec(
-        "PickMultiStrawbPhysicsEnv",
+        "TestEnv",
         num_envs=num_envs,
         vectorization_mode="async",
         vector_kwargs={},
         randomize_domain=True,
         cameras=cameras,
-        include_priveleged_obs=True,
         reward_type="dense",
         ee_dof=4,
         width=camera_res,
@@ -121,7 +120,9 @@ def main():
 
         if key == ord('r'):
             print("Resetting all environments...")
+            reset_time = time.time()
             obs, infos = envs.reset()
+            print(f"Reset took {time.time() - reset_time:.2f} seconds.")
             continue
         if key == 27:
             print("Exiting...")

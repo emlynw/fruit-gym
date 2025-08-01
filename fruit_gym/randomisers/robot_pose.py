@@ -74,4 +74,3 @@ class RobotPoseRandomiser(Randomiser):
         angle = rng.uniform(self.ang_lo, self.ang_hi)
         dq = _axis_angle_to_quat(axis, angle)
         data.mocap_quat[0] = _quat_mul(dq, data.mocap_quat[0])
-        print(f"RobotPoseRandomiser: pos={dpos}, rot={dq}, yaw_only={self.yaw_only}, angle={angle:.2f} rad")
