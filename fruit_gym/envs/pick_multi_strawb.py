@@ -180,6 +180,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self._CARTESIAN_BOUNDS = np.array([[0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.85])
+        self._blocks_picked = 0
         self.gripper_sleep = 0.6
         self.grasp_threshold = 0.333
         MAX_OBSERVABLE_STRAWBERRIES = 8
@@ -635,6 +636,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self._block_success = self._block_init.copy()
             self._block_success[0] = self._x_success
             self._block_success[2] = self._z_success
+            self._blocks_picked = 0
 
             for i in self.red_blocks:
                 self.red_positions[i] = self.data.sensor(f"block{i}_pos").data.copy()
@@ -1273,6 +1275,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             dist_from_init = np.linalg.norm(curr_pos - init_pos)
             if dist_from_init < 0.05:
                 r_grasp = 1.0
+                self._blocks_picked += 1
                 # Make the strawberry invisible by updating its geoms.
                 # We assume its associated bodies are "blockX", "blockX_big", "blockX_small".
                 for suffix in ["", "_big", "_small"]:
@@ -1334,6 +1337,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
         info = rewards
+        info['blocks_picked'] = self._blocks_picked
 
         info['success'] = completed
         return reward, info

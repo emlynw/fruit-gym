@@ -65,6 +65,7 @@ def main():
                 # cv2.putText(frame, f"Smoothness: {info['r_smooth']:.2f}", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 # cv2.putText(frame, f"collision: {info['r_col']:.2f}", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 # cv2.putText(frame, f"displacement: {info['r_dist']:.2f}", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)     
+                cv2.putText(frame, f"Blocks Picked: {info.get('blocks_picked', 0)}", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 if reward_type == "sparse":
                     cv2.putText(frame, f"Dense Reward: {info['dense_reward']:.2f}", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)              
 
