@@ -174,22 +174,6 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         self.skybox_tex_ids = []
         self.floor_tex_ids = []
 
-        for i in range(self.model.ntex):
-            if i < self.model.ntex - 1:
-                # For all but the last texture, use the next index
-                name_start = self.model.name_texadr[i]
-                name_end = self.model.name_texadr[i + 1] - 1
-            else:
-                # For the last texture, go until the first null byte or the end of the names array
-                name_start = self.model.name_texadr[i]
-                name_end = len(self.model.names)
-            # Decode the name slice
-            texture_name = self.model.names[name_start:name_end].split(b'\x00', 1)[0].decode('utf-8')
-            if self.model.texture(texture_name).type[0] == 2:
-                self.skybox_tex_ids.append(self.model.texture(texture_name).id)
-            else:
-                self.floor_tex_ids.append(self.model.texture(texture_name).id)
-
         self.initial_position = np.array([0.1, 0.0, 0.75], dtype=np.float32)
         self.initial_orientation = [0.725, 0.0, 0.688, 0.0]
         self.initial_rotation = Rotation.from_quat(self.initial_orientation)
@@ -217,22 +201,6 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         for child_body_id in range(self.model.nbody):
             if self.model.body_parentid[child_body_id] == body_id:
                 self._set_inactive_properties_recursive(child_body_id)
-
-
-
-
-    def domain_randomization(self) -> None:
-        dr = self.cfg.get("domain_randomization", {})
-        self._viewers = {
-            cam: MujocoRenderer(
-                self.model,
-                self.data,
-                width=self.width,
-                height=self.height,
-                camera_name=cam,           # <‑‑ choose the camera here
-            )
-            for cam in self.cameras
-        }
 
     def reset_arm_and_gripper(self):
         self.data.qpos[self._panda_dof_ids] = self._PANDA_HOME

@@ -28,7 +28,7 @@ def main():
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
 
-    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, cameras=cameras, include_priveleged_obs=False, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=True)
+    env = gym.make("TestEnv", randomize_domain=True, cameras=cameras, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=True)
     env = TimeLimit(env, max_episode_steps=500)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
@@ -92,8 +92,8 @@ def main():
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
                 # Write reward on the frame
                 cv2.putText(frame, f"Reward: {reward:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv2.putText(frame, f"energy: {info['r_energy']}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv2.putText(frame, f"smooth: {info['r_smooth']}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                # cv2.putText(frame, f"energy: {info['r_energy']}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                # cv2.putText(frame, f"smooth: {info['r_smooth']}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 cv2.imshow(camera, frame)
                 
             # Reset environment on 'R' key press
