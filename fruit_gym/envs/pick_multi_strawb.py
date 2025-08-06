@@ -1,3 +1,4 @@
+from xxlimited import new
 import numpy as np
 import os
 from pathlib import Path
@@ -156,6 +157,16 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
     ):
         utils.EzPickle.__init__(self, image_obs=image_obs, **kwargs)
 
+        self.face_left = kwargs.pop("face_left", False)
+        self.face_right = kwargs.pop("face_right", False)
+        assert not (self.face_left and self.face_right), "Choose only one of face_left or face_right"
+
+        base_angle = 0.0  # Default forward-facing
+        if self.face_left:
+            base_angle = np.pi / 2
+        elif self.face_right:
+            base_angle = -np.pi / 2
+
         if cameras is None:
             cameras = ["wrist1", "wrist2", "front"]
 
@@ -174,11 +185,16 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.discrete_gripper = discrete_gripper
 
         self._PANDA_HOME = np.array([0.0, -1.6, 0.0, -2.54, -0.05, 2.49, 0.822], dtype=np.float32)
+        self._PANDA_HOME[0] = base_angle
         self._GRIPPER_HOME = np.array([0.0141, 0.0141], dtype=np.float32)
         self._GRIPPER_MIN = 0
         self._GRIPPER_MAX = 0.004
         self._PANDA_XYZ = np.array([0.1, 0, 0.8], dtype=np.float32)
         self._CARTESIAN_BOUNDS = np.array([[0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
+        if self.face_left:
+            self._CARTESIAN_BOUNDS = np.array([[-0.2, 0.05, 0.6], [0.2, 0.55, 0.95]], dtype=np.float32)
+        elif self.face_right:
+            self._CARTESIAN_BOUNDS = np.array([[-0.2, -0.55, 0.6], [0.2, 0.55, 0.95]], dtype=np.float32)
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.85])
         self._blocks_picked = 0
@@ -346,8 +362,21 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.initial_vine_rotation = Rotation.from_quat(np.roll(self.model.body_quat[self.model.body("vine1").id], -1))
 
         self.initial_position = np.array([0.1, 0.0, 0.75], dtype=np.float32)
+        if self.face_left:
+            self.initial_position = np.array([0.0, -0.1, 0.75], dtype=np.float32)
+        elif self.face_right:
+            self.initial_position = np.array([0.0, 0.1, 0.75], dtype=np.float32)
         self.initial_orientation = [0.725, 0.0, 0.688, 0.0]
         self.initial_rotation = Rotation.from_quat(self.initial_orientation)
+
+        initial_rot = Rotation.identity()
+        if self.face_left:
+            initial_rot = Rotation.from_euler('z', -np.pi / 2)
+        elif self.face_right:
+            initial_rot = Rotation.from_euler('z', np.pi / 2)
+        initial_rot *= Rotation.from_euler('x', -np.pi / 2)
+        self.initial_rotation = initial_rot
+        self.initial_orientation = np.roll(initial_rot.as_quat(), 1).tolist()  # wxyz
 
         self.init_headlight_diffuse = self.model.vis.headlight.diffuse.copy()
         self.init_headlight_ambient = self.model.vis.headlight.ambient.copy()
@@ -674,6 +703,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             if pos_diff < pos_threshold and orient_diff < orient_threshold:
                 return self._get_obs()
             else:
+                # return self._get_obs()  # Return the observation even if reset failed
                 print(
                     f"Reset attempt {attempt+1}: pose error too high "
                     f"(pos_diff: {pos_diff:.4f}, orient_diff: {orient_diff:.4f}), retrying reset."
@@ -713,17 +743,19 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             # Convert the action rotation to a Rotation object
             action_rotation = Rotation.from_euler('xyz', drot)
             # Apply the action rotation
-            new_rotation = action_rotation * current_rotation
-            # Calculate the new relative rotation
-            new_relative_rotation = self.initial_rotation.inv() * new_rotation
-            # Convert to euler angles and clip
-            relative_euler = new_relative_rotation.as_euler('xyz')
-            clipped_euler = np.clip(relative_euler, self._ROTATION_BOUNDS[0], self._ROTATION_BOUNDS[1])
-            # Convert back to rotation and apply to initial orientation
-            clipped_rotation = Rotation.from_euler('xyz', clipped_euler)
-            final_rotation = self.initial_rotation * clipped_rotation
+            new_rotation = current_rotation*action_rotation
+            ############# Clipping not working for EE rotation
+            # # Calculate the new relative rotation
+            # new_relative_rotation = self.initial_rotation.inv() * new_rotation
+            # # Convert to euler angles and clip
+            # relative_euler = new_relative_rotation.as_euler('xyz')
+            # clipped_euler = np.clip(relative_euler, self._ROTATION_BOUNDS[0], self._ROTATION_BOUNDS[1])
+            # # Convert back to rotation and apply to initial orientation
+            # clipped_rotation = Rotation.from_euler('xyz', clipped_euler)
+            # final_rotation = self.initial_rotation * clipped_rotation
+            #############
             # Set the final orientation
-            self.data.mocap_quat[0] = np.roll(final_rotation.as_quat(), 1)
+            self.data.mocap_quat[0] = np.roll(new_rotation.as_quat(), 1)
 
         # --- Handle gripper and simulation ---
         moving_gripper, target_sim_time = self._handle_gripper_control(action)
@@ -1168,6 +1200,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
     def _get_obs(self):
         obs = {"state": {}}
+        print(f"joint1 position: {self.data.qpos[0]}, joint2 position: {self.data.qpos[1]}")
         
         # --- TCP pose and velocity ---
         tcp_world_pos = self.data.sensor("pinch_pos").data.copy()
@@ -1191,6 +1224,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         
         # Storing tcp_pose as [pos (3), quat_xyzw (4)]
         obs["state"]["tcp_pose"] = np.concatenate([tcp_world_pos, tcp_world_quat_xyzw]).astype(np.float32)
+        print(f"TCP Pose: {tcp_world_pos}, Quaternion: {tcp_world_quat_xyzw}")
         obs["state"]["tcp_vel"] = self._get_vel() 
         obs["state"]["gripper_pos"] = np.array([2 * self.data.qpos[8] / self._GRIPPER_HOME[0]], dtype=np.float32)
         if self.discrete_gripper:
