@@ -28,7 +28,7 @@ def main():
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
 
-    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, cameras=cameras, include_priveleged_obs=False, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=True)
+    env = gym.make("PickMultiStrawbEnv", randomize_domain=True, cameras=cameras, include_privileged_obs=False, reward_type="dense", ee_dof=4, width=camera_res, height=camera_res, gripper_pause=True)
     env = TimeLimit(env, max_episode_steps=500)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
