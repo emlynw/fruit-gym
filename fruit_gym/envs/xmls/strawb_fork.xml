@@ -1,0 +1,65 @@
+<mujoco model="strawb_vine">
+  <compiler angle="radian" meshdir="assets/"/>
+
+  <asset>
+    <texture name="strawb_leaves" type="2d" file="textures/strawberry_leaves_512.png"/>
+    <texture name="strawb_texture" type="2d" file="textures/strawberry_fixed_512.png"/>
+    <material name="strawberry_material" texture="strawb_texture" shininess="0.01" specular="0.01" reflectance="0.05" texuniform="true"/>
+    <material name="strawberry_leaves" texture="strawb_leaves" shininess="0.1" specular="0.1" reflectance="0.5" texuniform="true"/>
+    <mesh name="strawberry" file="strawberry_origin.obj" scale="1.0 1.0 1.0"/>
+    <mesh name="strawberry_leaves" file="strawberry_leaves_origin.obj" scale="1.0 1.0 1.0"/>
+    <mesh name="strawberry_collision" file="strawberry_collision_origin.obj" scale="1.0 1.0 1.0"/>
+  </asset>
+
+  <worldbody>
+    <body name="vine1" pos="0.45 -0.03 0.9" euler="0 2.64 0">
+      <body name="aB_first">
+        <!-- <joint name="aJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.01" armature="0.0001" stiffness="0.02"/> -->
+        <geom name="aG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+        <site name="aS_first" pos="0 0 0" group="3"/>
+        <body name="aB_1" pos="0.03 0 0">
+          <joint name="aJ_1" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.01" armature="0.0001" stiffness="0.02"/>
+          <geom name="aG1" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+          <body name="aB_2" pos="0.03 0 0">
+            <joint name="aJ_2" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.01" armature="0.0001" stiffness="0.02"/>
+            <geom name="aG2" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+            <body name="aB_last" pos="0.03 0 0" euler="-0.8 -0.8 0">
+              <!-- branch 1 -->
+              <joint name="aJ1_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.01" armature="0.0001" stiffness="0.02"/>
+              <geom name="aG3" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <site name="aS1_last" pos="0.03 0 0" group="3"/>      
+              <body name="stem1" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
+                <geom name="stem1" type="capsule" size="0.0007 0.012" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
+                <site name="stem1" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <body name="block1" pos="0.00019 0.0382 -0.00055">
+                  <geom name="block1" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block1_visual" type="mesh" mesh="strawberry" material="strawberry_material" contype="0" conaffinity="0"/>
+                  <geom name="leaves1" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
+                </body>
+              </body>
+            </body>
+
+            <!-- <joint name="aJ_3" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.01" armature="0.0001" stiffness="0.02"/> -->
+            <body name="aB_fork" pos="0.03 0 0">
+              <!-- branch 2 -->
+              <joint name="aJ2_last" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.01" armature="0.0001" stiffness="0.02"/>
+              <geom name="aG4" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>
+              <site name="aS2_last" pos="0.03 0 0" group="3"/>      
+              <body name="stem2" pos="0.091 -0.00024 0.00052" quat="0.707388 0 0 0.706825">
+                <geom name="stem2" type="capsule" size="0.0007 0.012" pos="0.0002 0.049 -0.00055" euler="-1.57 0.0 0.0" rgba="0.208 0.337 0.149 1"/>
+                <site name="stem2" pos="0.0001 0.054 -0.0004" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <body name="block2" pos="0.00019 0.0382 -0.00055">
+                  <geom name="block2" type="mesh" mesh="strawberry_collision" density="400" group="3"/>
+                  <geom name="block2_visual" type="mesh" mesh="strawberry" material="strawberry_material" contype="0" conaffinity="0"/>
+                  <geom name="leaves2" type="mesh" mesh="strawberry_leaves" rgba="0.9 0.9 0.9 1.0" material="strawberry_leaves" contype="0" conaffinity="0"/>
+                </body>
+              </body>
+
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+</mujoco>
