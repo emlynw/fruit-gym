@@ -632,9 +632,10 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
 
         # Reward
         reward, info = self._compute_reward(action)
-        info['dense_reward'] = reward
 
-        reward = float(info['success'])
+        if self.reward_type == "sparse":
+            info['dense_reward'] = reward
+            reward = float(info['success'])
         
         if info['success'] == True and self.reward_type == "sparse":
             terminated = True
