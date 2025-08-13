@@ -150,6 +150,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         reward_type: str = "dense",
         gripper_pause: bool = False,
         discrete_gripper: bool = True,
+        disappear_delay_steps: int = 16,
         render_mode: str = "rgb_array",
         config_path: Optional[Union[str, Path]] = None,
         **kwargs,
@@ -172,6 +173,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.reward_type = reward_type
         self.gripper_pause = gripper_pause
         self.discrete_gripper = discrete_gripper
+        self.disappear_delay_steps = disappear_delay_steps
+        self._pending_removals = {}   # {strawb_idx: steps_left}
+        self._grasped_pending = set() # indices already credited with r_grasp, awaiting disappearance
 
         self._PANDA_HOME = np.array([0.0, -1.6, 0.0, -2.54, -0.05, 2.49, 0.822], dtype=np.float32)
         self._GRIPPER_HOME = np.array([0.0141, 0.0141], dtype=np.float32)
@@ -638,6 +642,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self._block_success[0] = self._x_success
             self._block_success[2] = self._z_success
             self._blocks_picked = 0
+            self._pending_removals = {}
+            self._grasped_pending = set()
 
             for i in self.red_blocks:
                 self.red_positions[i] = self.data.sensor(f"block{i}_pos").data.copy()
@@ -768,6 +774,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         # Reward
         reward, info = self._compute_reward(action)
+
+        # Disappear picked strawberries
+        self._tick_removal_timers()
+
         if self.reward_type == "sparse":
             info['dense_reward'] = reward
             if info['r_grasp'] > 0:
@@ -1078,6 +1088,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         if stem_idx in self.red_blocks:
                             left_finger_contact_good = True
                             grasped_idx = stem_idx
+                        else:
+                            left_finger_contact_bad = True
                     except ValueError:
                         pass
                 elif other not in allowed_prefixes and other != "right_finger_inner":
@@ -1098,6 +1110,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                             else:
                                 # Different stems contacted by different fingers - no good grasp
                                 grasped_idx = None
+                        else:
+                            # If the right finger contacts a green stem, it's a bad grasp
+                            right_finger_contact_bad = True
                     except ValueError:
                         pass
                 elif other not in allowed_prefixes and other != "left_finger_inner":
@@ -1105,7 +1120,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         
         # Good grasp only if BOTH fingers contact good targets
         good_grasp = left_finger_contact_good and right_finger_contact_good
-        bad_grasp = left_finger_contact_bad or right_finger_contact_bad
+        bad_grasp = left_finger_contact_bad and right_finger_contact_bad
         
         info["left_finger_contacts"] = left_contacts
         info["right_finger_contacts"] = right_contacts
@@ -1253,9 +1268,16 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         r_dist = - np.tanh(5 * privileged_info["total_displacement"])
 
         # Penalize large actions and large changes in actions (reduce shakiness)
-        r_energy = -np.tanh(0.5*np.linalg.norm(action[:-1]))  # Exclude the grasp action
-        r_smooth = -np.tanh(0.5*np.linalg.norm(action[:-1] - self.prev_action[:-1]))
+        # r_energy = -np.tanh(0.5*np.linalg.norm(action[:-1]))  # Exclude the grasp action
+        # r_smooth = -np.tanh(0.5*np.linalg.norm(action[:-1] - self.prev_action[:-1]))
+        r_energy = -np.linalg.norm(action[:-1])  # Exclude the grasp action
+        r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1])
         self.prev_action = action
+
+        if np.array_equal(self.gripper_vec, self.gripper_dict["closing"]) or np.array_equal(self.gripper_vec, self.gripper_dict["opening"]):
+            r_gripper = -1.0
+        else:
+            r_gripper = 0.0
 
         # Reward for attempting to close gripper when very close to a red strawberry
         r_attempt_close = 0.0
@@ -1270,37 +1292,20 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         grasped_idx = privileged_info.get("grasped_idx", None)
         
         if good_grasp and (not bad_grasp) and grasped_idx is not None:
-            # Look for the red stem index that was contacted.
             curr_pos = self.data.sensor(f"block{grasped_idx}_pos").data
             init_pos = self.red_positions[grasped_idx]
             dist_from_init = np.linalg.norm(curr_pos - init_pos)
+
             if dist_from_init < 0.05:
                 r_grasp = 1.0
-                self._blocks_picked += 1
-                # Make the strawberry invisible by updating its geoms.
-                # We assume its associated bodies are "blockX", "blockX_big", "blockX_small".
-                for suffix in ["", "_big", "_small"]:
-                    body_name = f"block{grasped_idx}{suffix}"
-                    try:
-                        body = self.model.body(body_name)
-                    except Exception:
-                        continue
-                    geom_start = self.model.body_geomadr[body.id]
-                    geom_count = self.model.body_geomnum[body.id]
-                    for i in range(geom_count):
-                        geom_id = geom_start + i
-                        # Set visual group to 3, and disable collision.
-                        self.model.geom_group[geom_id] = 3
-                        self.model.geom_contype[geom_id] = 0
-                        self.model.geom_conaffinity[geom_id] = 0
-
-                # Remove the grasped strawberry from active lists.
-                if grasped_idx in self.active_indices:
-                    self.active_indices = np.delete(self.active_indices, np.where(self.active_indices == grasped_idx))
-                if grasped_idx in self.red_blocks:
-                    self.red_blocks.remove(grasped_idx)        
+                # Only pay r_grasp once per strawberry
+                if grasped_idx not in self._grasped_pending:
+                    self._blocks_picked += 1
+                    self._grasped_pending.add(grasped_idx)
+                    # Schedule disappearance after N steps; keep visuals/collisions/rewards unchanged until then
+                    self._pending_removals[grasped_idx] = int(getattr(self, "disappear_delay_steps", 8))
             else:
-                r_grasp = 0.0   
+                r_grasp = 0.0
 
         # Penalty for being alive
         r_alive = -1.0 
@@ -1322,8 +1327,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 'r_bad_grasp': r_bad_grasp, 
                 'r_energy': r_energy, 
                 'r_smooth': r_smooth,
+                'r_gripper': r_gripper,
                 'r_alive': r_alive}
-        reward_scales = {'r_grasp': 100.0, 
+        reward_scales = {'r_grasp': 8.0, 
                         'r_red': 4.0, 
                         'r_alignment': 1.0,
                         'r_in_box': 1.0,
@@ -1331,9 +1337,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         'r_col': 1.0, 
                         'r_dist': 1.0, 
                         'r_attempt_close': 2.0, 
-                        'r_bad_grasp': 0.0, 
+                        'r_bad_grasp': 2.0, 
                         'r_energy': 1.0, 
                         'r_smooth': 1.0,
+                        'r_gripper': 0.2,
                         'r_alive': 0.0}
         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
@@ -1342,3 +1349,38 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         info['success'] = completed
         return reward, info
+    
+    def _tick_removal_timers(self):
+        if not self._pending_removals:
+            return
+        # Decrement counters
+        for k in list(self._pending_removals.keys()):
+            self._pending_removals[k] -= 1
+        # Apply any that reached zero
+        due = [k for k, t in self._pending_removals.items() if t <= 0]
+        for idx in due:
+            self._apply_removal(idx)
+            self._pending_removals.pop(idx, None)
+            self._grasped_pending.discard(idx)
+
+    def _apply_removal(self, idx: int):
+        # Hide all geoms for this strawberry (block{idx}, block{idx}_big, block{idx}_small)
+        for suffix in ["", "_big", "_small"]:
+            body_name = f"block{idx}{suffix}"
+            try:
+                body = self.model.body(body_name)
+            except Exception:
+                continue
+            geom_start = self.model.body_geomadr[body.id]
+            geom_count = self.model.body_geomnum[body.id]
+            for k in range(geom_count):
+                geom_id = geom_start + k
+                self.model.geom_group[geom_id] = 3
+                self.model.geom_contype[geom_id] = 0
+                self.model.geom_conaffinity[geom_id] = 0
+
+        # Remove from active lists (matches your current behavior)
+        if hasattr(self, "active_indices") and (idx in self.active_indices):
+            self.active_indices = np.delete(self.active_indices, np.where(self.active_indices == idx))
+        if hasattr(self, "red_blocks") and (idx in self.red_blocks):
+            self.red_blocks.remove(idx)
