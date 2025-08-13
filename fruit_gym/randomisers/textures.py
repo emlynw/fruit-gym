@@ -107,3 +107,42 @@ class SkyboxRandomiser(Randomiser):
             return
         path = rng.choice(self._skyboxes)
         upload_skybox_texture(model, ctx, tex_id=tex_id, path=path)
+
+class AssignBerryMaterialsRandomiser(Randomiser):
+    """
+    After compile, assign each strawberry visual geom a random material from
+    ['berry_mat_red', 'berry_mat_green', 'berry_mat_mix'] that you define in scene.xml.
+    """
+    affects_spec = False
+    needs_ctx = False
+
+    def __init__(self, material_names=None, name_match="block_visual"):
+        self.material_names = material_names or ["berry_mat_red", "berry_mat_green", "berry_mat_mix"]
+        self.name_match = name_match.lower()
+
+    @staticmethod
+    def _looks_like_block_visual(name: str) -> bool:
+        n = (name or "").lower()
+        return ("block_visual" in n) or (n.startswith("block") and "visual" in n)
+
+    def apply(self, *, spec, model, data, rng, ctx=None):
+        # Resolve material IDs that actually exist in the compiled model
+        mat_ids = []
+        for name in self.material_names:
+            try:
+                mid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_MATERIAL, name)
+                mat_ids.append(int(mid))
+            except mujoco.Error:
+                pass
+        if not mat_ids:
+            print(f"[BerryAssign] None of {self.material_names} found in model; skipping.")
+            return
+
+        mat_ids = np.asarray(mat_ids, dtype=int)
+        n = 0
+        for gid in range(int(model.ngeom)):
+            gname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
+            if self._looks_like_block_visual(gname):
+                model.geom_matid[gid] = int(rng.choice(mat_ids))
+                n += 1
+        print(f"[BerryAssign] Rebound {n} geoms to random berry materials.")

@@ -12,7 +12,7 @@
   </asset>
 
   <worldbody>
-    <body name="vine1" pos="0.45 -0.03 0.9" euler="0 -0.5 0">
+    <body name="vine1" pos="0.45 -0.03 0.9" euler="0 -2.07 0">
       <body name="aB_first">
         <!-- <joint name="aJ_first" pos="0 0 0" type="ball" group="3" actuatorfrclimited="false" damping="0.01" armature="0.0001" stiffness="0.02"/> -->
         <geom name="aG0" size="0.0007 0.015" pos="0.015 0 0" quat="0.707107 0 -0.707107 0" type="capsule" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" mass="0.0001" rgba="0.208 0.337 0.149 1"/>

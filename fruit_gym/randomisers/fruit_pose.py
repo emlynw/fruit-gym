@@ -65,6 +65,8 @@ class PoseRandomiser(Randomiser):
         rot_enabled: bool = True,
         rot_angle_range: tuple[float, float] = (-0.15, 0.15),
         yaw_only: bool = False,
+        leaves_tag: str = "leaves",
+        leaves_z_offset: float = 0.1
     ):
         self.prefix = str(name_prefix)
         self.pos_lo = np.asarray(pos_lo, dtype=float)
@@ -72,6 +74,8 @@ class PoseRandomiser(Randomiser):
         self.rot_enabled = rot_enabled
         self.rot_lo, self.rot_hi = rot_angle_range
         self.yaw_only = yaw_only
+        self.leaves_tag = leaves_tag
+        self.leaves_z_offset = float(leaves_z_offset)
 
     # --------------------------------------------------------------------- #
 
@@ -83,6 +87,10 @@ class PoseRandomiser(Randomiser):
 
             # ----- position -------------------------------------------------
             model.body_pos[bid] += rng.uniform(self.pos_lo, self.pos_hi)
+
+            # NEW: small fixed lift for leaves
+            if self.leaves_tag and self.leaves_tag in name:
+                model.body_pos[bid][2] += self.leaves_z_offset
 
             # ----- orientation (optional) ----------------------------------
             if self.rot_enabled:

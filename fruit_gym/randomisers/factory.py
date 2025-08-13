@@ -21,6 +21,7 @@ import numpy as np
 from fruit_gym.randomisers import (
     Randomiser,
     SkyboxRandomiser,
+    AssignBerryMaterialsRandomiser,
     LightingRandomiser,
     PoseRandomiser,
     ScaleRandomiser,
@@ -89,9 +90,16 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
     # ---------------- spawner ----------------------------------------------
     if dr.get("objects_count", {}).get("enabled", False):
         s_cfg = dr["objects_count"]
+
+        raw_choices = s_cfg.get("xml_choices")
+        if raw_choices is None:
+            raw_choices = ["strawb_stiff.xml", "strawb_fork.xml", "leaves.xml"]
+
+        xml_choices = [Path(xml_dir) / name for name in raw_choices]
+
         rand.append(
             SpawnerRandomiser(
-                strawb_xml=Path(xml_dir) / "strawb.xml",
+                xml_choices=xml_choices,
                 min_count=s_cfg.get("min_fruits", 4),
                 max_count=s_cfg.get("max_fruits", 8),
                 mount_prefix=s_cfg.get("mount_prefix", "vine_"),
@@ -116,6 +124,14 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
             ScaleRandomiser(
                 prefixes=["strawberry", "strawberry_leaves"],
                 scale_range=scale_range,
+            )
+        )
+
+    # ---------------- strawb texture ------------------------------------------------
+    if dr.get("strawberry_texture", {}).get("enabled", False):
+        rand.append(
+            AssignBerryMaterialsRandomiser(
+                material_names=["berry_mat_red", "berry_mat_green", "berry_mat_mix"]
             )
         )
 

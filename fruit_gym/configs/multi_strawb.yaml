@@ -45,6 +45,9 @@ domain_randomization:
   skybox:
     enabled: true
 
+  strawberry_texture:
+    enabled: true
+
   objects_count:
     enabled: true
     min_fruits: 4
@@ -54,8 +57,11 @@ domain_randomization:
 
   object_positions:
     enabled: true
-    position_range_low: [-0.06, -0.03, -0.05]
-    position_range_high: [0.06, 0.03, 0.05]
+    rotation_enabled: true
+    yaw_only: true
+    rotation_angle_range: [-0.05, 0.05]
+    position_range_low: [-0.06, -0.03, -0.02]
+    position_range_high: [0.06, 0.03, 0.02]
 
   object_scale:
     enabled: true

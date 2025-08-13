@@ -17,6 +17,15 @@
   <asset>
     <texture type="skybox" name="sky_4" file="textures/skyboxes/sky_4.png" gridsize="3 4" gridlayout=".U..LFRB.D.."/>
     <texture type="2d" name="Grass001" file="textures/Grass001_2K-PNG_Color.png"/>
+    <!-- Strawb Textures -->
+    <texture name="berry_tex_red"   type="2d" file="textures/strawberry_fixed_512.png"/>
+    <texture name="berry_tex_green" type="2d" file="textures/strawberry_fixed_512_green.png"/>
+    <texture name="berry_tex_mix"   type="2d" file="textures/strawberry_fixed_512_mix.png"/>
+
+    <!-- Strawb Materials -->
+    <material name="berry_mat_red"   texture="berry_tex_red"/>
+    <material name="berry_mat_green" texture="berry_tex_green"/>
+    <material name="berry_mat_mix"   texture="berry_tex_mix"/>
     <material name="floor" texture="Grass001" specular="1" shininess="1"/>
   </asset>
 
