@@ -186,7 +186,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.85])
         self._blocks_picked = 0
-        self.gripper_sleep = 0.6
+        self.gripper_sleep = 0.2
         self.grasp_threshold = 0.333
         MAX_OBSERVABLE_STRAWBERRIES = 8
 
