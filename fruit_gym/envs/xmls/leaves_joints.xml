@@ -14,7 +14,7 @@
   </asset>
 
   <worldbody>
-    <body name="vine1" pos="0.45 -0.03 0.9" euler="0 2.64 0">
+    <body name="vine1" pos="0.45 -0.03 0.9" euler="0 -2.07 0">
 
       <body name="aB_first">
         <!-- Base segment -->

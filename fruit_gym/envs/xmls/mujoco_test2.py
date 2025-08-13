@@ -1,7 +1,7 @@
 """
 optimized_scene.py  •  MuJoCo 3.3.x
 
-Adds random per-vine template selection from: strawb.xml, leaves.xml, strawb_fork.xml
+Adds random per-vine template selection from: strawb.xml, leaves_joints.xml, strawb_fork.xml
 """
 
 import random
@@ -166,7 +166,7 @@ def main():
         print("Warning: model has no skybox texture; B key disabled.")
 
     vine_ids = np.array([model.body(n).id for n in root_names])
-    strawberry_prefixes = ["leaf", "strawberry", "strawberry_leaves", "strawberry_collision"]
+    strawberry_prefixes = ["strawberry", "strawberry_leaves", "strawberry_collision"]
 
     renderer = mujoco.Renderer(model, 480, 480)
     cam = mujoco.MjvCamera()
