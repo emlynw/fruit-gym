@@ -3,7 +3,7 @@
 
   <asset>
     <texture name="strawb_leaves" type="2d" file="textures/strawberry_leaves_512.png"/>
-    <texture name="strawb_texture" type="2d" file="textures/strawberry_fixed_512.png"/>
+    <texture name="strawb_texture" type="2d" file="textures/strawberry_fixed_512_green.png"/>
     <material name="strawberry_material" texture="strawb_texture" shininess="0.01" specular="0.01" reflectance="0.05" texuniform="true"/>
     <material name="strawberry_leaves" texture="strawb_leaves" shininess="0.1" specular="0.1" reflectance="0.5" texuniform="true"/>
     <mesh name="strawberry" file="strawberry_origin.obj" scale="1.0 1.0 1.0"/>
