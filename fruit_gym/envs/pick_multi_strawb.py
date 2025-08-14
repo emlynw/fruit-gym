@@ -1336,7 +1336,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         'r_bad_grasp': 2.0, 
                         'r_energy': 1.0, 
                         'r_smooth': 1.0,
-                        'r_gripper': 0.2,
+                        'r_gripper': 0.05,
                         'r_alive': 0.0}
         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
