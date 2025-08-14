@@ -703,19 +703,15 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             z, y, x, roll, pitch, yaw, grasp = action
             drot = np.array([roll, pitch, yaw]) * self.rot_scale
         dpos = np.array([x, y, z]) * self.pos_scale
-        # Apply position change
+        # Calculate position change
         pos = self.data.sensor("pinch_pos").data
         current_quat = np.roll(self.data.sensor("pinch_quat").data, -1)
         current_rotation = Rotation.from_quat(current_quat)
-
         dpos_world = current_rotation.apply(dpos)
         npos = np.clip(pos + dpos_world, *self._CARTESIAN_BOUNDS)
         self.data.mocap_pos[0] = npos
 
         if self.ee_dof > 3:
-            # Convert mujoco wxyz to scipy xyzw
-            current_quat = np.roll(self.data.sensor("pinch_quat").data, -1)
-            current_rotation = Rotation.from_quat(current_quat)
             # Convert the action rotation to a Rotation object
             action_rotation = Rotation.from_euler('xyz', drot)
             # Apply the action rotation
