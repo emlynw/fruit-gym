@@ -691,6 +691,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
     def step(self, action):
         if np.array(action).shape != self.action_space.shape:
             raise ValueError("Action dimension mismatch")
+
+        if np.isnan(action).any():
+            print(f"nan action passed to env", flush=True)
         action = np.clip(action, self.action_space.low, self.action_space.high)
         # Scale actions (zyx because end effector frame z is along the gripper axis)
         if self.ee_dof == 3:
@@ -715,6 +718,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             # Convert the action rotation to a Rotation object
             action_rotation = Rotation.from_euler('xyz', drot)
             # Apply the action rotation
+            q_wxyz = self.data.sensor("pinch_quat").data.copy()
+            if not np.all(np.isfinite(q_wxyz)) or np.linalg.norm(q_wxyz) < 1e-12:
+                print("warning: pinch_quat invalid at t=", self.data.time, "q=", q_wxyz, flush=True)
+
             new_rotation = action_rotation * current_rotation
             # Calculate the new relative rotation
             new_relative_rotation = self.initial_rotation.inv() * new_rotation
@@ -973,13 +980,15 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 - grasped_idx: Index of grasped strawberry (if any)
         """
 
+        _MAX_DIST = 1.0
+
         tcp_pos = self.data.sensor("long_pinch_pos").data
         left_pinch_pos = self.data.sensor("left_pinch_pos").data
         right_pinch_pos = self.data.sensor("right_pinch_pos").data
         
         # Initialize return dict
         info = {
-            "min_red_dist": float('inf'),
+            "min_red_dist": _MAX_DIST,
             "radial_dist": 0.0,
             "good_grasp": False,
             "bad_grasp": False,
@@ -993,7 +1002,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         }
         
         # Distance to nearest red strawberry
-        if len(self.red_blocks) > 0:
+        if self.red_blocks:
             dists = {}
             for red_idx in self.red_blocks:
                 stem_pos = self.data.sensor(f"stem{red_idx}_pos").data
@@ -1011,8 +1020,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 vec_to_stem = closest_red_stem_pos - tcp_pos
                 proj_y = np.dot(vec_to_stem, gripper_y_axis)
                 info["radial_dist"] = abs(proj_y)
-                
-         # Check how many RED stems are in the gripper box
+        else:
+            info["min_red_dist"] = 0.0
+            info["radial_dist"] = 0.0
+
+        # Check how many RED stems are in the gripper box
         if hasattr(self, 'red_blocks'):
             for red_idx in self.red_blocks:
                 try:
@@ -1021,6 +1033,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         info["red_stems_in_box_count"] += 1
                 except Exception:
                     pass
+        else:
+            info["red_stems_in_box_count"] = 0
 
         # Check how many GREEN stems are in the gripper box
         green_vine_part_in_box = False
@@ -1336,7 +1350,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         'r_bad_grasp': 2.0, 
                         'r_energy': 1.0, 
                         'r_smooth': 1.0,
-                        'r_gripper': 0.05,
+                        'r_gripper': 0.0,
                         'r_alive': 0.0}
         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
