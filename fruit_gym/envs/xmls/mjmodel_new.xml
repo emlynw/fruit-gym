@@ -224,7 +224,7 @@
     <mesh name="strawberry2" file="strawberry_new.obj" scale="0.006 0.006 0.006"/>
     <mesh name="strawberry2_collision" file="strawberry2_collision.obj" scale="0.006 0.006 0.006"/>
     <model name="vine" file="vine.xml"/>
-    <model name="strawb_stiff" file="strawb_new.xml"/>
+    <model name="strawb_new" file="strawb_new.xml"/>
     <model name="strawb_fork" file="strawb_fork_new.xml"/>
     <model name="strawb_mix" file="strawb_new_mix.xml"/>
     <model name="leaves" file="leaves_joints_new.xml"/>
@@ -433,16 +433,16 @@
     </body> -->
 
         <!-- Cluster origin near the original vine pose -->
-    <body name="vines_cluster_origin" pos="0.43 -0.03 0.88">
-      <!-- 5 x strawb_stiff -->
-      <body name="stiff1" pos="0.000  0.000  0.000"><attach model="strawb_stiff" prefix="stf1_"/></body>
-      <body name="stiff2" pos="0.020  0.000  0.000"><attach model="strawb_stiff" prefix="stf2_"/></body>
-      <body name="stiff3" pos="-0.015 0.012  0.005"><attach model="strawb_stiff" prefix="stf3_"/></body>
+    <body name="vines_cluster_origin" pos="0.43 -0.03 0.88" euler="0 0 3.14">
+      <!-- 5 x strawb_new -->
+      <body name="new1" pos="0.000  0.000  0.000"><attach model="strawb_new" prefix="stf1_"/></body>
+      <body name="new2" pos="0.020  0.000  0.000"><attach model="strawb_new" prefix="stf2_"/></body>
+      <body name="new3" pos="-0.015 0.012  0.005"><attach model="strawb_new" prefix="stf3_"/></body>
       <body name="mix1" pos="0.025 0.010 0.008"><attach model="strawb_mix" prefix="mix1_"/></body>
       <body name="mix2" pos="0.03 0.010 0.008"><attach model="strawb_mix" prefix="mix2_"/></body>
     </body>
 
-    <body name="fork_cluster_origin" pos="0.43 -0.03 0.90">
+    <body name="fork_cluster_origin" pos="0.43 -0.03 0.90" euler="0 0 3.14">
       <!-- 3 x strawb_fork -->
       <body name="fork1"  pos="-0.020 0.005  0.004"><attach model="strawb_fork"  prefix="frk1_"/></body>
       <body name="fork2"  pos="0.015 -0.010 0.006"><attach model="strawb_fork"  prefix="frk2_"/></body>
@@ -450,7 +450,7 @@
       <!-- <body name="fork4"  pos="0.010 0.015 0.002"><attach model="strawb_fork"  prefix="frk4_"/></body> -->
     </body>
 
-    <body name="leaves_cluster_origin" pos="0.43 -0.03 0.91">
+    <body name="leaves_cluster_origin" pos="0.43 -0.03 0.91" euler="0 0 3.14">
       <!-- 4 x leaves -->
       <body name="leaves1" pos="0.005  0.02 -0.004"><attach model="leaves" prefix="lvs1_"/></body>
       <body name="leaves2" pos="-0.018 0.000  0.007"><attach model="leaves" prefix="lvs2_"/></body>
