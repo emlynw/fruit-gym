@@ -1,14 +1,14 @@
 import numpy as np
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 import yaml
 import mujoco
 import random
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
-from gymnasium.spaces import Box, Dict
+from gymnasium.spaces import Box, Dict as GymDict
 from scipy.spatial.transform import Rotation
 from fruit_gym.controllers.opspace import opspace
 import gc
@@ -153,6 +153,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         disappear_delay_steps: int = 16,
         render_mode: str = "rgb_array",
         config_path: Optional[Union[str, Path]] = None,
+        reward_scales: Optional[Dict[str, float]] = None,
         **kwargs,
     ):
         utils.EzPickle.__init__(self, image_obs=image_obs, **kwargs)
@@ -189,6 +190,26 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.gripper_sleep = 0.2
         self.grasp_threshold = 0.333
         MAX_OBSERVABLE_STRAWBERRIES = 8
+
+        default_reward_scales = {'r_grasp': 8.0, 
+                        'r_red': 4.0, 
+                        'r_alignment': 1.0,
+                        'r_in_box': 1.0,
+                        'r_green_in_box_penalty': 1.0,
+                        'r_col': 1.0, 
+                        'r_dist': 1.0, 
+                        'r_attempt_close': 2.0, 
+                        'r_bad_grasp': 2.0, 
+                        'r_energy': 1.0, 
+                        'r_smooth': 1.0,
+                        'r_gripper': 0.0,
+                        'r_alive': 0.0}
+        
+        if reward_scales is not None:
+            print(f"updating reward scales to : {reward_scales}")
+            default_reward_scales.update(reward_scales)
+
+        self.reward_scales = default_reward_scales
 
         if config_path is None:
             config_path = Path(__file__).parent.parent / "configs" / "strawb_hanging.yaml"
@@ -266,11 +287,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 0, np.inf, shape=(1,), dtype=np.float32
             )
 
-        self.observation_space = Dict({"state": Dict(state_space_dict)})
+        self.observation_space = GymDict({"state": GymDict(state_space_dict)})
         if include_privileged_obs:
-            self.observation_space["priv_state"] = Dict(priv_state_space_dict)
+            self.observation_space["priv_state"] = GymDict(priv_state_space_dict)
         if image_obs:
-            self.observation_space["images"] = Dict()
+            self.observation_space["images"] = GymDict()
             for camera in self.cameras:
                 self.observation_space["images"][camera] = Box(
                     0, 255, shape=(self.height, self.width, 3), dtype=np.uint8
@@ -1339,20 +1360,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 'r_smooth': r_smooth,
                 'r_gripper': r_gripper,
                 'r_alive': r_alive}
-        reward_scales = {'r_grasp': 8.0, 
-                        'r_red': 4.0, 
-                        'r_alignment': 1.0,
-                        'r_in_box': 1.0,
-                        'r_green_in_box_penalty': 1.0,
-                        'r_col': 1.0, 
-                        'r_dist': 1.0, 
-                        'r_attempt_close': 2.0, 
-                        'r_bad_grasp': 2.0, 
-                        'r_energy': 1.0, 
-                        'r_smooth': 1.0,
-                        'r_gripper': 0.0,
-                        'r_alive': 0.0}
-        rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
+
+        rewards = {k: v * self.reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
         info = rewards
         info['blocks_picked'] = self._blocks_picked
