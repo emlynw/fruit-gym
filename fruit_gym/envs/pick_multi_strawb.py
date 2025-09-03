@@ -183,7 +183,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self._GRIPPER_MIN = 0
         self._GRIPPER_MAX = 0.004
         self._PANDA_XYZ = np.array([0.1, 0, 0.8], dtype=np.float32)
-        self._CARTESIAN_BOUNDS = np.array([[0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
+        self._CARTESIAN_BOUNDS = np.array([[-0.1, -0.4, 0.6], [0.55, 0.4, 1.1]], dtype=np.float32)
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.85])
         self._blocks_picked = 0
@@ -423,14 +423,20 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.model.geom_conaffinity[:] = self._initial_geom_conaffinity
         self.model.geom_group[:] = self._initial_geom_group # Restore initial groups
 
-        # Target pos
+        spawn_dist_m = object_cfg.get("spawn_distance_m", 0.2)  # 10 cm by default
+        target_pos = self._point_from_mocap(
+            dist=spawn_dist_m,
+            lateral=object_cfg.get("target_lateral_m", 0.0),
+            vertical=object_cfg.get("target_vertical_m", 0.0),
+            xy_only=True,  # keep it “10 cm at current yaw” on the XY plane
+        )
+        # compensate for vine
+        target_pos[2] += 0.1  # Add some height
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
         target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
-        target_pos = self.data.sensor("pinch_pos").data.copy()
-        target_pos[0] += 0.15
-        target_pos[2] += 0.2
-        self.model.body_pos[self.model.body("vine1").id] = target_pos
+        self.model.body_pos[self.model.body("vine1").id] = target_pos + target_pos_noise
+
         # Target orientation
         random_z_angle = np.random.uniform(low=-np.pi, high=np.pi) # Random angle in radians
         z_rotation = Rotation.from_euler('z', random_z_angle)
@@ -593,14 +599,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
     def domain_randomization(self) -> None:
         dr = self.cfg.get("domain_randomization", {})
+        if dr.get("initial_state", {}).get("enabled", False):
+            initial_state_noise(self)
         if dr.get("objects", {}).get("enabled", False):
             self.object_noise()
         if dr.get("lighting", {}).get("enabled", False):
             lighting_noise(self)
         if dr.get("action_scale", {}).get("enabled", False):
             action_scale_noise(self)
-        if dr.get("initial_state", {}).get("enabled", False):
-            initial_state_noise(self)
         if dr.get("cameras", {}).get("enabled", False):
             camera_noise(self)
         if dr.get("skybox", {}).get("enabled", False):
@@ -623,6 +629,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
     def reset_model(self):
         # Some random resets were getting mujoco Nan warnings that's why the loop
         attempt = 0
+        pos_threshold = 0.1    
+        orient_threshold = 0.2   
+        quat_eps = 1e-12
         while True:
             attempt += 1
             self.reset_arm_and_gripper()
@@ -642,7 +651,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             desired_pos = self.data.mocap_pos[0].copy()
             desired_quat = self.data.mocap_quat[0].copy()
 
-            for _ in range(10*self._n_substeps):
+            for _ in range(40*self._n_substeps):
                 tau = opspace(
                     model=self.model,
                     data=self.data,
@@ -655,13 +664,42 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 )
                 self.data.ctrl[self._panda_ctrl_ids] = tau
                 mujoco.mj_step(self.model, self.data)
-            
+                # Get the current end-effector pose from sensors.
+                current_pos = self.data.sensor("pinch_pos").data.copy()
+                current_quat = self.data.sensor("pinch_quat").data.copy()      
+                nc = np.linalg.norm(current_quat)
+                nd = np.linalg.norm(desired_quat)      
+                if (not np.isfinite(nc)) or (not np.isfinite(nd)) or (nc < quat_eps) or (nd < quat_eps):
+                    orient_diff = float('inf')  # force retry if a quat is degenerate
+                else:
+                    c = current_quat / nc
+                    d = desired_quat / nd
+                    dot = np.dot(c, d)
+                    dot = float(np.clip(abs(dot), -1.0, 1.0))
+                    orient_diff = 2.0 * np.arccos(dot)
+                # Compute the difference in position.
+                pos_diff = np.linalg.norm(current_pos - desired_pos)
+                # Break if Nan, will then continue to next iteration
+                if (np.any(np.isnan(current_pos)) or np.any(np.isnan(current_quat)) or
+                np.any(np.isinf(current_pos)) or np.any(np.isinf(current_quat))):
+                    break
+                # No need to carry on if tolerance ok
+                if pos_diff < pos_threshold and orient_diff < orient_threshold:
+                    break
+
+            # Check that sensor readings are finite.
+            if (np.any(np.isnan(current_pos)) or np.any(np.isnan(current_quat)) or
+                np.any(np.isinf(current_pos)) or np.any(np.isinf(current_quat)) or
+                (pos_diff > pos_threshold or orient_diff > orient_threshold)):
+                print(
+                    f"Reset attempt {attempt+1}: pose error too high "
+                    f"(pos_diff: {pos_diff:.4f}, orient_diff: {orient_diff:.4f}), retrying reset."
+                )
+                if attempt > 100:
+                    raise RuntimeError("Failed to achieve valid reset after multiple attempts")
+                continue
+
             self._block_init = self.data.sensor("block1_pos").data
-            self._x_success = self._block_init[0] - 0.1
-            self._z_success = self._block_init[2] + 0.05
-            self._block_success = self._block_init.copy()
-            self._block_success[0] = self._x_success
-            self._block_success[2] = self._z_success
             self._blocks_picked = 0
             self._pending_removals = {}
             self._grasped_pending = set()
@@ -677,36 +715,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self.gripper_state = 0
             self.gripper_blocked = False
 
-             # Get the current end-effector pose from sensors.
-            current_pos = self.data.sensor("pinch_pos").data.copy()
-            current_quat = self.data.sensor("pinch_quat").data.copy()
+            return self._get_obs()
 
-            # Check that sensor readings are finite.
-            if (np.any(np.isnan(current_pos)) or np.any(np.isnan(current_quat)) or
-                np.any(np.isinf(current_pos)) or np.any(np.isinf(current_quat))):
-                continue
-
-            # Compute the difference in position.
-            pos_diff = np.linalg.norm(current_pos - desired_pos)
-            # Compute orientation difference using the dot-product of unit quaternions.
-            current_quat_norm = current_quat / np.linalg.norm(current_quat)
-            desired_quat_norm = desired_quat / np.linalg.norm(desired_quat)
-            dot = np.abs(np.dot(current_quat_norm, desired_quat_norm))
-            dot = np.clip(dot, -1.0, 1.0)
-            orient_diff = 2 * np.arccos(dot)
-
-            pos_threshold = 0.1    
-            orient_threshold = 0.2    
-
-            if pos_diff < pos_threshold and orient_diff < orient_threshold:
-                return self._get_obs()
-            else:
-                print(
-                    f"Reset attempt {attempt+1}: pose error too high "
-                    f"(pos_diff: {pos_diff:.4f}, orient_diff: {orient_diff:.4f}), retrying reset."
-                )
-                if attempt > 100:
-                    raise RuntimeError("Failed to achieve valid reset after multiple attempts")
 
 
     def step(self, action):
@@ -898,6 +908,38 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         J = np.vstack((J_v, J_w))
         dx = J @ dq
         return dx.astype(np.float32)
+    
+    def _target_frame_from_mocap(self):
+        """
+        Returns (pos, R) of the target end-effector frame taken from the mocap body.
+        - pos: world position (3,)
+        - R  : world rotation matrix (3x3) mapping local -> world
+        NOTE: self.data.mocap_quat is in wxyz; SciPy expects xyzw.
+        """
+        pos = self.data.mocap_pos[0].copy()
+        q_wxyz = self.data.mocap_quat[0].copy()
+        q_xyzw = np.roll(q_wxyz, -1)
+        R = Rotation.from_quat(q_xyzw).as_matrix()
+        return pos, R
+    
+    def _point_from_mocap(self, dist=0.10, lateral=0.0, vertical=0.0, xy_only=True):
+        """
+        Build a world point offset from the mocap target frame:
+        - dist     : along local +Z (gripper forward)
+        - lateral  : along local +Y (between fingers)
+        - vertical : along local +X (gripper thickness/"up")
+        If xy_only=True, project the forward vector onto XY so pitch/roll don’t lift the fruit.
+        """
+        base, R = self._target_frame_from_mocap()
+        x_axis, y_axis, z_axis = R[:, 0], R[:, 1], R[:, 2]
+
+        fwd = z_axis
+        if xy_only:
+            f = fwd.copy(); f[2] = 0.0
+            n = np.linalg.norm(f)
+            fwd = f if n < 1e-8 else f / n  # safe normalize
+
+        return base + dist * fwd + lateral * y_axis + vertical * x_axis
     
     def _get_strawberry_state_obs(self, tcp_world_pos):
         """

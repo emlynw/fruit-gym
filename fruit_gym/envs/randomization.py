@@ -2,6 +2,7 @@ import numpy as np
 import random
 from typing import Dict, Any
 import mujoco
+from scipy.spatial.transform import Rotation
 
 def lighting_noise(env: Any) -> None:
     """
@@ -86,20 +87,40 @@ def action_scale_noise(env: Any) -> None:
 
 def initial_state_noise(env: Any) -> None:
     """
-    Apply noise to the initial end-effector state.
-    
-    Args:
-        env: The environment instance (must have attributes: cfg, data, _PANDA_XYZ).
+    Apply noise to the initial end-effector state (position + orientation).
+    Orientation noise is XYZ (roll, pitch, yaw) in radians.
     """
-    dr_cfg: Dict[str, Any] = env.cfg.get("domain_randomization", {})
-    state_cfg: Dict[str, Any] = dr_cfg.get("initial_state", {})
+    dr_cfg = env.cfg.get("domain_randomization", {})
+    state_cfg = dr_cfg.get("initial_state", {})
     if not state_cfg.get("enabled", False):
         return
 
-    ee_noise_low = state_cfg.get("ee_noise_low", [0.0, 0.0, 0.0])
-    ee_noise_high = state_cfg.get("ee_noise_high", [0.0, 0.0, 0.0])
+    # --- Position noise ---
+    ee_noise_low  = np.array(state_cfg.get("ee_noise_low",  [0.0, 0.0, 0.0]), dtype=float)
+    ee_noise_high = np.array(state_cfg.get("ee_noise_high", [0.0, 0.0, 0.0]), dtype=float)
     ee_noise = np.random.uniform(low=ee_noise_low, high=ee_noise_high, size=3)
     env.data.mocap_pos[0] = env._PANDA_XYZ + ee_noise
+
+    # --- Orientation noise (local XYZ euler) ---
+    rot_low  = np.array(state_cfg.get("ee_rot_noise_low",  [0.0, 0.0, 0.0]), dtype=float)
+    rot_high = np.array(state_cfg.get("ee_rot_noise_high", [0.0, 0.0, 0.0]), dtype=float)
+    rot_noise = np.random.uniform(low=rot_low, high=rot_high, size=3)  # radians
+
+    # current mocap quat is wxyz; Rotation expects xyzw
+    q_wxyz = env.data.mocap_quat[0].copy()
+    if (not np.all(np.isfinite(q_wxyz))) or (np.linalg.norm(q_wxyz) < 1e-12):
+        base_R = Rotation.identity()
+    else:
+        base_R = Rotation.from_quat(np.roll(q_wxyz, -1))  # to xyzw
+
+    noise_R = Rotation.from_euler('xyz', rot_noise)
+
+    # Apply noise in LOCAL gripper frame:
+    R_new = base_R * noise_R
+    # If you want WORLD-frame noise instead, use: R_new = noise_R * base_R
+
+    q_new_xyzw = R_new.as_quat()
+    env.data.mocap_quat[0] = np.roll(q_new_xyzw, 1)  # back to wxyz
 
 
 def camera_noise(env: Any) -> None:
