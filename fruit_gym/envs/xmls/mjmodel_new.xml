@@ -225,7 +225,7 @@
     <mesh name="strawberry2_collision" file="strawberry2_collision.obj" scale="0.006 0.006 0.006"/>
     <model name="vine" file="vine.xml"/>
     <model name="strawb_new" file="strawb_new.xml"/>
-    <model name="strawb_fork" file="strawb_fork_new.xml"/>
+    <model name="strawb_fork" file="strawb_fork_double_2.xml"/>
     <model name="strawb_mix" file="strawb_new_mix.xml"/>
     <model name="leaves" file="leaves_joints_new.xml"/>
   </asset>

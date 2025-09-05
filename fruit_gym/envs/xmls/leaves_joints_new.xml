@@ -13,11 +13,14 @@
   <asset>
     <!-- Leaf mesh only; color via geom rgba -->
     <mesh name="leaf" file="leaf.obj" scale="0.4 0.4 0.4"/>
+    <texture name="leaves_g2"   type="2d" file="textures/leaves_g2.png"/>
+    <material name="leaves_g2" texture="leaves_g2" shininess="0.1" specular="0.1" reflectance="0.5" texuniform="true"/>
   </asset>
 
   <worldbody>
     <!-- root at origin; rotate/place when attaching in the parent scene -->
     <body name="vine_root">
+      <joint class="vine" name="J_0"/>
 
       <!-- straight vine of 4 capsules -->
       <body name="seg_first">
@@ -41,17 +44,17 @@
                   <!-- Leaf A (+X) -->
                   <body name="leafA_body" pos="0.006 0 0">
                     <joint name="leafA_joint" type="ball" damping="0.0005" armature="0.0001" stiffness="0.01"/>
-                    <geom  name="leaf_A" type="mesh" mesh="leaf" mass="0.002" rgba="0.208 0.337 0.149 1"/>
+                    <geom  name="leaf_A" type="mesh" mesh="leaf" mass="0.002" rgba="0.208 0.337 0.149 1" material="leaves_g2"/>
                   </body>
                   <!-- Leaf B (+Y), roll 180°, yaw +90° -->
                   <body name="leafB_body" pos="0 0.006 0" euler="3.1415926 0 1.5707963">
                     <joint name="leafB_joint" type="ball" damping="0.0005" armature="0.0001" stiffness="0.01"/>
-                    <geom  name="leaf_B" type="mesh" mesh="leaf" mass="0.002" rgba="0.208 0.337 0.149 1"/>
+                    <geom  name="leaf_B" type="mesh" mesh="leaf" mass="0.002" rgba="0.208 0.337 0.149 1" material="leaves_g2"/>
                   </body>
                   <!-- Leaf C (−X), yaw 180° -->
                   <body name="leafC_body" pos="-0.006 0 0" euler="0 0 3.1415926">
                     <joint name="leafC_joint" type="ball" damping="0.0005" armature="0.0001" stiffness="0.01"/>
-                    <geom  name="leaf_C" type="mesh" mesh="leaf" mass="0.002" rgba="0.208 0.337 0.149 1"/>
+                    <geom  name="leaf_C" type="mesh" mesh="leaf" mass="0.002" rgba="0.208 0.337 0.149 1" material="leaves_g2"/>
                   </body>
                 </body>
               </body>

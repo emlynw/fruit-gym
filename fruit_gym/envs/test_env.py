@@ -306,6 +306,7 @@ class TestEnv(MujocoEnv, utils.EzPickle):
             orient_threshold = 0.2    
 
             if pos_diff < pos_threshold and orient_diff < orient_threshold:
+
                 return self._get_obs()
             else:
                 print(
@@ -492,6 +493,18 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         dx = J @ dq
         return dx.astype(np.float32)
     
+    def _index_fruits(self):
+        ripe_geom_ids = []
+        unripe_geom_ids = []
+        for i in range(self.model.ngeom):
+            geom_name = self.model.geom(i).name
+            if "fruit" in geom_name:
+                mat_id = self.model.geom_matid[i]
+            if mat_id in self.ripe_mat_ids:
+                ripe_geom_ids.append(i)
+            elif mat_id in self.unripe_mat_ids:
+                unripe_geom_ids.append(i)
+        return ripe_geom_ids, unripe_geom_ids
 
 
     def _get_obs(self):

@@ -22,6 +22,7 @@
   <worldbody>
     <!-- root at origin; rotate/place when attaching in the parent scene -->
     <body name="vine_root">
+      <joint class="vine" name="aJ_0"/>
       <!-- segment 0 fixed root segment -->
       <body name="seg_first">
         <geom class="vine" name="aG0" fromto="0 0 0  0.03 0 0"/>
