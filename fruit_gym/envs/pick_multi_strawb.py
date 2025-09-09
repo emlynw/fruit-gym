@@ -154,6 +154,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         render_mode: str = "rgb_array",
         config_path: Optional[Union[str, Path]] = None,
         reward_scales: Optional[Dict[str, float]] = None,
+        use_potential_rewards: bool = False,
+        shaping_gamma: float = 0.99,
         **kwargs,
     ):
         utils.EzPickle.__init__(self, image_obs=image_obs, **kwargs)
@@ -190,6 +192,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.gripper_sleep = 0.2
         self.grasp_threshold = 0.333
         MAX_OBSERVABLE_STRAWBERRIES = 8
+        
+        self.use_potential_rewards = use_potential_rewards
+        self.shaping_gamma = shaping_gamma
+        self._prev_phi_red = 0.0
+        self._prev_phi_align = 0.0
 
         default_reward_scales = {'r_grasp': 8.0, 
                         'r_red': 4.0, 
@@ -714,6 +721,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self.prev_gripper_state = 0 # 0 for open, 1 for closed
             self.gripper_state = 0
             self.gripper_blocked = False
+
+            if self.use_potential_rewards:
+                _priv0 = self._compute_privileged_info()
+                self._prev_phi_red = self._phi_red(_priv0)
+                self._prev_phi_align = self._phi_align(_priv0)
 
             return self._get_obs()
 
@@ -1330,8 +1342,19 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
          
         
         ## Rewards
-        r_red = - np.tanh(20 * min_red_dist) if min_red_dist != float('inf') else 0.0
-        r_alignment = - np.tanh(60 * privileged_info["radial_dist"]) if min_red_dist != float('inf') else 0.0
+        if self.use_potential_rewards:
+            # Compute current potentials on s' (post-step)
+            phi_red_now = self._phi_red(privileged_info)
+            phi_align_now = self._phi_align(privileged_info)
+
+            # Potential-based shaping r' = gamma*Phi(s') - Phi(s)
+            r_red = self.shaping_gamma * phi_red_now - self._prev_phi_red
+            r_alignment = self.shaping_gamma * phi_align_now - self._prev_phi_align
+        else:
+            # Original dense terms
+            r_red = - np.tanh(20 * min_red_dist) if np.isfinite(min_red_dist) else 0.0
+            r_alignment = - np.tanh(60 * privileged_info["radial_dist"]) if np.isfinite(min_red_dist) else 0.0
+        
         r_in_box = 0.0 if red_stems_in_box_count == 1 and green_stems_in_box_count == 0 else -1.0
 
         
@@ -1409,6 +1432,10 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         info['blocks_picked'] = self._blocks_picked
 
         info['success'] = completed
+
+        if self.use_potential_rewards:
+            self._prev_phi_red = phi_red_now
+            self._prev_phi_align = phi_align_now
         return reward, info
     
     def _tick_removal_timers(self):
@@ -1445,3 +1472,19 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self.active_indices = np.delete(self.active_indices, np.where(self.active_indices == idx))
         if hasattr(self, "red_blocks") and (idx in self.red_blocks):
             self.red_blocks.remove(idx)
+
+    def _phi_red(self, priv) -> float:
+        """State-only potential: high near the target red stem."""
+        d = priv["min_red_dist"]
+        if not np.isfinite(d):
+            return 0.0
+        # Smooth, monotone, bounded in (0, 1]
+        return float(-d)
+
+    def _phi_align(self, priv) -> float:
+        """State-only potential: high when gripper is well aligned (small radial_dist)."""
+        # If no red exists, keep potential neutral
+        if not np.isfinite(priv["min_red_dist"]):
+            return 0.0
+        r = priv["radial_dist"]
+        return float(-r)

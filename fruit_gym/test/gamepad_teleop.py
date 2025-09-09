@@ -23,8 +23,13 @@ def main():
     reward_type = "dense"
     ee_dof = 6
     episode_reward = 0.0
+    reward_scales = {
+        # 'r_red': 100.0,
+        # 'r_alignment': 100.0,
+    }
 
-    env = gym.make("PickMultiStrawbEnv", randomize_domain=True,reward_type=reward_type, ee_dof=ee_dof, width=camera_res, height=camera_res, gripper_pause=True)
+    env = gym.make("PickMultiStrawbEnv", randomize_domain=True,reward_type=reward_type, ee_dof=ee_dof, width=camera_res, 
+                   height=camera_res, gripper_pause=True, use_potential_rewards=False, reward_scales=reward_scales)
     env = TimeLimit(env, max_episode_steps=2000)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
@@ -56,6 +61,8 @@ def main():
                 action = info['intervene_action']
 
             obs, reward, terminated, truncated, info = env.step(action)
+            print(f"r_align: {info['r_alignment']:.2f}")
+            print(f"r_red: {info['r_red']:.2f}")
             episode_reward += reward
             for camera in cameras:
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
