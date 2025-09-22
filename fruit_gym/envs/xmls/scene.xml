@@ -27,6 +27,12 @@
     <material name="berry_mat_green" texture="berry_tex_green"/>
     <material name="berry_mat_mix"   texture="berry_tex_mix"/>
     <material name="floor" texture="Grass001" specular="1" shininess="1"/>
+
+    <mesh name="sb1" file="sb1.obj" scale="1 1 1"/>
+    <mesh name="sb2" file="sb2.obj" scale="1 1 1"/>
+    <mesh name="sb3" file="sb3.obj" scale="1 1 1"/>
+    <mesh name="sb4" file="sb4.obj" scale="1 1 1"/>
+    <mesh name="sb5" file="sb5.obj" scale="1 1 1"/>
   </asset>
 
   <worldbody>

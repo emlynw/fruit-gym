@@ -25,6 +25,7 @@ from fruit_gym.randomisers import (
     LightingRandomiser,
     PoseRandomiser,
     ScaleRandomiser,
+    MeshVariantRandomiser,
     SpawnerRandomiser,
     RobotPoseRandomiser,
 )
@@ -105,6 +106,18 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
                 mount_prefix=s_cfg.get("mount_prefix", "vine_"),
             )
         )
+
+    # ---------------- mesh variants ----------------------------------------
+    if dr.get("strawberry_mesh", {}).get("enabled", False):
+        mv_cfg = dr["strawberry_mesh"]
+        rand.append(
+            MeshVariantRandomiser(
+                geom_prefixes=tuple(mv_cfg.get("geom_prefixes", ["block"])),
+                mesh_pool=mv_cfg.get("mesh_pool"),  # e.g. ["strawberry_1","strawberry_2","strawberry_3"]
+                mesh_name_prefix=mv_cfg.get("mesh_name_prefix", "strawberry_"),
+            )
+        )
+
 
     # --------------- object positions --------------------------------------
     if dr.get("object_positions", {}).get("enabled", False):

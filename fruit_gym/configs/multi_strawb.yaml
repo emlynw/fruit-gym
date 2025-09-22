@@ -55,6 +55,10 @@ domain_randomization:
     max_ripe: 3
     random_count: True
 
+  strawberry_mesh:
+    enabled: true
+    mesh_pool: ["sb1", "sb2", "sb3", "sb4", "sb5"]
+
   object_positions:
     enabled: true
     rotation_enabled: true
