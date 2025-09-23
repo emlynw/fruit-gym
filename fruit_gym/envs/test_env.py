@@ -1,44 +1,72 @@
 import numpy as np
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 import yaml
 import mujoco
-import random
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from gymnasium.spaces import Box, Dict
 from scipy.spatial.transform import Rotation
+
+# External helpers (clean refactor)
+from .constants import (
+    PANDA_HOME,
+    GRIPPER_HOME,
+    GRIPPER_MIN,
+    GRIPPER_MAX,
+    PANDA_XYZ,
+    CARTESIAN_BOUNDS,
+    ROTATION_BOUNDS,
+    default_obj_pos,
+    gripper_sleep,
+    grasp_threshold,
+    ripe_mats,
+)
+from .control import (
+    handle_gripper_control,
+    run_opspace_for_duration,
+    run_opspace_substeps,
+)
+from .observation import get_obs
+from .indexing import index_fruits_and_stems
+from .reward import compute_reward, RewardConfig
+from .mujoco_utils import tick_removal_timers
 from fruit_gym.controllers.opspace import opspace
 from fruit_gym.randomisers.factory import build_randomisers
-import copy
 
-def load_config(config_path):
-    with open(config_path, 'r') as config_file:
-        return yaml.safe_load(config_file)
+
+# ---------------------------
+# Utilities
+# ---------------------------
+
+def load_config(config_path: Union[str, Path]):
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
+
+
+# ---------------------------
+# Environment
+# ---------------------------
 
 class TestEnv(MujocoEnv, utils.EzPickle):
-    r""" Testing refactor
-    """
+    r"""Clean refactor of the TestEnv using shared helpers for control, obs, and indexing."""
 
+    metadata = {"render_modes": ["human", "rgb_array", "depth_array"]}
 
-    metadata = { 
-        "render_modes": ["human", "rgb_array", "depth_array"], 
-    }
-    
     def __init__(
         self,
         image_obs: bool = True,
         randomize_domain: bool = True,
-        ee_dof: int = 6, # 3 for position, 3 for orientation
+        ee_dof: int = 6,  # 3 for position, 3 for orientation
         control_dt: float = 0.05,
         physics_dt: float = 0.002,
         width: int = 480,
         height: int = 480,
         pos_scale: float = 0.008,
         rot_scale: float = 0.5,
-        cameras: List[str] = None,
+        cameras: Optional[List[str]] = None,
         reward_type: str = "dense",
         gripper_pause: bool = False,
         discrete_gripper: bool = True,
@@ -47,16 +75,19 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         **kwargs,
     ):
         utils.EzPickle.__init__(self, image_obs=image_obs, **kwargs)
+
+        # Basic paths and timing
         p = Path(__file__).parent
         self.xml_path = os.path.join(p, "xmls")
-        scene_path = os.path.join(self.xml_path, "scene.xml")
-        self.scene_path = scene_path
+        self.scene_path = os.path.join(self.xml_path, "scene.xml")
         self._n_substeps = int(float(control_dt) / float(physics_dt))
         self.frame_skip = 1
 
+        # Defaults
         if cameras is None:
             cameras = ["wrist1", "wrist2"]
 
+        # Public config
         self.image_obs = image_obs
         self.randomize_domain = randomize_domain
         self.ee_dof = ee_dof
@@ -70,74 +101,138 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         self.gripper_pause = gripper_pause
         self.discrete_gripper = discrete_gripper
 
-        self._PANDA_HOME = np.array([0.0, -1.6, 0.0, -2.54, -0.05, 2.49, 0.822], dtype=np.float32)
-        self._GRIPPER_HOME = np.array([0.0141, 0.0141], dtype=np.float32)
-        self._GRIPPER_MIN = 0
-        self._GRIPPER_MAX = 0.004
-        self._PANDA_XYZ = np.array([0.1, 0, 0.8], dtype=np.float32)
-        self._CARTESIAN_BOUNDS = np.array([[0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
-        self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
-        self.default_obj_pos = np.array([0.42, 0, 0.85])
-        self.gripper_sleep = 0.6
-        self.grasp_threshold = 0.333
-        self.ripe_mats = {"r1", "r2", "r3"}
+        self.reward_cfg = RewardConfig(reward_type=self.reward_type)  # tweak later if you want
+        self._pending_removals = {}
+        self._grasped_pending = set()
+        self._blocks_picked = 0
+        self._prev_phi_red = 0.0
+        self._prev_phi_align = 0.0
 
+        # Load YAML cfg (domain randomization, etc.)
         if config_path is None:
             config_path = Path(__file__).parent.parent / "configs" / "multi_strawb.yaml"
         self.cfg = load_config(config_path)
 
-        # Load the domain randomization configuration
+        # Build randomisers once
         self._randomisers = build_randomisers(self.cfg, xml_dir=self.xml_path)
 
-        # Define the basic state space components
-        state_space_dict = {
-            "tcp_pose": Box(-np.inf, np.inf, shape=(7,), dtype=np.float32), # 3 pos, 4 quat (xyzw)
+        # Observation space (state-only here; image keys added below if needed)
+        state_space = {
+            "tcp_pose": Box(-np.inf, np.inf, shape=(7,), dtype=np.float32),
             "tcp_vel": Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
             "gripper_pos": Box(-1, 1, shape=(1,), dtype=np.float32),
         }
         if self.discrete_gripper:
-            state_space_dict["gripper_vec"] = Box(0, 1, shape=(4,), dtype=np.float32)
-        
+            state_space["gripper_vec"] = Box(0, 1, shape=(4,), dtype=np.float32)
 
-        self.observation_space = Dict({"state": Dict(state_space_dict)})
-
+        self.observation_space = Dict({"state": Dict(state_space)})
         if image_obs:
             self.observation_space["images"] = Dict()
-            for camera in self.cameras:
-                self.observation_space["images"][camera] = Box(
+            for cam in self.cameras:
+                self.observation_space["images"][cam] = Box(
                     0, 255, shape=(self.height, self.width, 3), dtype=np.uint8
                 )
 
+        # Initialise MujocoEnv
         MujocoEnv.__init__(
-            self, 
-            scene_path, 
-            self.frame_skip, 
-            observation_space=self.observation_space, 
+            self,
+            self.scene_path,
+            self.frame_skip,
+            observation_space=self.observation_space,
             render_mode=self.render_mode,
             width=self.width,
-            height=self.height, 
+            height=self.height,
             **kwargs,
         )
         self.model.opt.timestep = physics_dt
 
+        # Action space: xyz + rpy + gripper (depending on ee_dof)
         self.action_space = Box(
-            np.array([-1.0]*(self.ee_dof+1)), 
-            np.array([1.0]*(self.ee_dof+1)),
+            np.array([-1.0] * (self.ee_dof + 1), dtype=np.float32),
+            np.array([1.0] * (self.ee_dof + 1), dtype=np.float32),
             dtype=np.float32,
         )
+
+        # Offscreen viewers per camera
         self._viewers = {
             cam: MujocoRenderer(
                 self.model,
                 self.data,
                 width=self.width,
                 height=self.height,
-                camera_name=cam,           # <‑‑ choose the camera here
+                camera_name=cam,
             )
             for cam in self.cameras
         }
-        self.setup()
 
-    def _initialize_simulation(self):
+        # Internal set-up
+        self._bootstrap_constants()
+        self._index_handles()
+        self._init_state()
+
+    # ---------------------------
+    # Internal helpers
+    # ---------------------------
+
+    def _bootstrap_constants(self) -> None:
+        """Mirror constants to instance attributes used by helpers for compatibility."""
+        # Home & limits
+        self._PANDA_HOME = PANDA_HOME.astype(np.float32)
+        self._GRIPPER_HOME = GRIPPER_HOME.astype(np.float32)
+        self._GRIPPER_MAX = float(GRIPPER_MAX)
+        self._GRIPPER_MIN = float(GRIPPER_MIN)
+        self._CARTESIAN_BOUNDS = CARTESIAN_BOUNDS.astype(np.float32)
+        self._ROTATION_BOUNDS = ROTATION_BOUNDS.astype(np.float32)
+        self.ripe_mats = set(ripe_mats)
+        # Timings / thresholds
+        self.gripper_sleep = float(gripper_sleep)
+        self.grasp_threshold = float(grasp_threshold)
+
+    def _index_handles(self) -> None:
+        self._panda_dof_ids = np.array([self.model.joint(f"joint{i}").id for i in range(1, 8)])
+        self._panda_ctrl_ids = np.array([self.model.actuator(f"actuator{i}").id for i in range(1, 8)])
+        self._gripper_ctrl_id = self.model.actuator("fingers_actuator").id
+        self._pinch_site_id = self.model.site("pinch").id
+
+    def _init_state(self) -> None:
+        # Gripper UI vector
+        self.gripper_dict = {
+            "open": np.array([1, 0, 0, 0], dtype=np.float32),
+            "closed": np.array([0, 1, 0, 0], dtype=np.float32),
+            "opening": np.array([0, 0, 1, 0], dtype=np.float32),
+            "closing": np.array([0, 0, 0, 1], dtype=np.float32),
+        }
+        self.prev_action = np.zeros(self.action_space.shape, dtype=np.float32)
+        self.prev_grasp_time = 0.0
+        self.prev_grasp = 0.0
+        self.gripper_state = 0  # 0=open, 1=closed
+        self.prev_gripper_state = 0
+        self.gripper_blocked = False
+
+        # Cache camera/light defaults for DR
+        for cam in self.cameras:
+            setattr(self, f"{cam}_pos", self.model.body_pos[self.model.body(cam).id].copy())
+            setattr(self, f"{cam}_quat", self.model.body_quat[self.model.body(cam).id].copy())
+        self.init_light_pos = self.model.body_pos[self.model.body("light0").id].copy()
+
+        # Reference EE orientation (kept for rotation clipping)
+        self.initial_position = np.array([0.1, 0.0, 0.75], dtype=np.float32)
+        self.initial_orientation = np.array([0.725, 0.0, 0.688, 0.0], dtype=np.float32)
+        self.initial_rotation = Rotation.from_quat(self.initial_orientation)
+
+        # Viewer lighting defaults (for potential DR hooks)
+        self.init_headlight_diffuse = self.model.vis.headlight.diffuse.copy()
+        self.init_headlight_ambient = self.model.vis.headlight.ambient.copy()
+        self.init_headlight_specular = self.model.vis.headlight.specular.copy()
+
+        # Put robot at home
+        self._reset_arm_and_gripper()
+
+    # ---------------------------
+    # MujocoEnv overrides
+    # ---------------------------
+
+    def _initialize_simulation(self) -> Tuple[mujoco.MjModel, mujoco.MjData]:
         """Parent calls this; build model from XML path (no spec editing here)."""
         self._base_spec = mujoco.MjSpec.from_file(self.scene_path)
         self._mj_spec = self._base_spec.copy()
@@ -147,116 +242,47 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         data = mujoco.MjData(model)
         return model, data
 
-    def setup(self):
-
-        self._panda_dof_ids = np.array([self.model.joint(f"joint{i}").id for i in range(1, 8)])
-        self._panda_ctrl_ids = np.array([self.model.actuator(f"actuator{i}").id for i in range(1, 8)])
-        self._gripper_ctrl_id = self.model.actuator("fingers_actuator").id
-        self._pinch_site_id = self.model.site("pinch").id
-
-        self.prev_action = np.zeros(self.action_space.shape)
-        self.prev_grasp_time = 0.0
-        self.prev_grasp = 0.0
-        self.gripper_dict = {
-            "open": np.array([1, 0, 0, 0], dtype=np.float32),
-            "closed": np.array([0, 1, 0, 0], dtype=np.float32),
-            "opening": np.array([0, 0, 1, 0], dtype=np.float32),
-            "closing": np.array([0, 0, 0, 1], dtype=np.float32),
-        }
-
-        self.reset_arm_and_gripper()
-
-        # Store initial values for randomization
-        for camera_name in self.cameras:
-            setattr(self, f"{camera_name}_pos", self.model.body_pos[self.model.body(camera_name).id].copy())
-            setattr(self, f"{camera_name}_quat", self.model.body_quat[self.model.body(camera_name).id].copy())
-        self.init_light_pos = self.model.body_pos[self.model.body('light0').id].copy()
-
-        self.skybox_tex_ids = []
-        self.floor_tex_ids = []
-
-        self.initial_position = np.array([0.1, 0.0, 0.75], dtype=np.float32)
-        self.initial_orientation = [0.725, 0.0, 0.688, 0.0]
-        self.initial_rotation = Rotation.from_quat(self.initial_orientation)
-
-        self.init_headlight_diffuse = self.model.vis.headlight.diffuse.copy()
-        self.init_headlight_ambient = self.model.vis.headlight.ambient.copy()
-        self.init_headlight_specular = self.model.vis.headlight.specular.copy()
-
-
-    def _set_inactive_properties_recursive(self, body_id: int):
-        """
-        Recursively sets geoms under body_id to group 3 
-        and makes them non-collidable
-        """
-        # Process geoms of the current body
-        geom_start = self.model.body_geomadr[body_id]
-        geom_count = self.model.body_geomnum[body_id]
-        for k in range(geom_count):
-            geom_id = geom_start + k
-            self.model.geom_group[geom_id] = 3  # Assign to group 3
-            self.model.geom_contype[geom_id] = 0
-            self.model.geom_conaffinity[geom_id] = 0
-        
-        # Recurse for children
-        for child_body_id in range(self.model.nbody):
-            if self.model.body_parentid[child_body_id] == body_id:
-                self._set_inactive_properties_recursive(child_body_id)
-
-    def reset_arm_and_gripper(self):
-        self.data.qpos[self._panda_dof_ids] = self._PANDA_HOME
-        self.data.qpos[7:9] = self._GRIPPER_HOME
-        self.data.ctrl[self._gripper_ctrl_id] = self._GRIPPER_MAX
-        self.gripper_vec = self.gripper_dict["open"]
-        mujoco.mj_forward(self.model, self.data)
-        self.data.mocap_pos[0] = self.data.sensor("pinch_pos").data.copy()
-        self.data.mocap_quat[0] = self.data.sensor("pinch_quat").data.copy()
-        mujoco.mj_step(self.model, self.data)
-
-
     def reset_model(self):
-        # Some random resets were getting mujoco Nan warnings that's why the loop
+        # Robust reset with randomisation passes and opspace settle
         attempt = 0
         while True:
             attempt += 1
             self._mj_spec = self._base_spec.copy()
 
+            # Randomisers that affect spec first
             viewer = self.mujoco_renderer._get_viewer("rgb_array")
             ctx = viewer.con
-
-             # -------- first pass: spec randomisers --------
             for r in self._randomisers:
                 if r.affects_spec:
                     r.apply(spec=self._mj_spec, model=None, data=None, rng=self.np_random, ctx=ctx)
 
-            # re-compile
+            # Recompile and fresh data
             self.model = self._mj_spec.compile()
             self.data = mujoco.MjData(self.model)
-            self.reset_arm_and_gripper()
+            self._index_handles()
+            self._reset_arm_and_gripper()
 
-
-            # -------- second pass: model/data randomisers --------
+            # Randomisers that affect compiled model/data
             for r in self._randomisers:
                 if not r.affects_spec:
                     r.apply(spec=None, model=self.model, data=self.data, rng=self.np_random, ctx=ctx)
 
+            # Rebuild viewers for new model
             self._viewers = {
-            cam: MujocoRenderer(
-                self.model,
-                self.data,
-                width=self.width,
-                height=self.height,
-                camera_name=cam,           # <‑‑ choose the camera here
-            )
-            for cam in self.cameras
+                cam: MujocoRenderer(
+                    self.model, self.data, width=self.width, height=self.height, camera_name=cam
+                )
+                for cam in self.cameras
             }
 
+            # Clean state and forward once
             self.data.qvel[:] = 0
             self.data.qacc[:] = 0
             self.data.qfrc_applied[:] = 0
             self.data.xfrc_applied[:] = 0
             mujoco.mj_forward(self.model, self.data)
 
+            # Optionally fix mocap to nominal
             if not self.randomize_domain:
                 self.data.mocap_pos[0] = self.initial_position
                 self.data.mocap_quat[0] = np.roll(self.initial_orientation, 1)
@@ -264,7 +290,8 @@ class TestEnv(MujocoEnv, utils.EzPickle):
             desired_pos = self.data.mocap_pos[0].copy()
             desired_quat = self.data.mocap_quat[0].copy()
 
-            for _ in range(10*self._n_substeps):
+            # Let opspace settle for a bit
+            for _ in range(10 * self._n_substeps):
                 tau = opspace(
                     model=self.model,
                     data=self.data,
@@ -277,432 +304,156 @@ class TestEnv(MujocoEnv, utils.EzPickle):
                 )
                 self.data.ctrl[self._panda_ctrl_ids] = tau
                 mujoco.mj_step(self.model, self.data)
-            
 
+            # Reset gripper markers
             self.grasp = -1.0
             self.prev_grasp_time = 0.0
-            self.prev_gripper_state = 0 # 0 for open, 1 for closed
+            self.prev_gripper_state = 0
             self.gripper_state = 0
             self.gripper_blocked = False
 
-             # Get the current end-effector pose from sensors.
+            # Validate pose
             current_pos = self.data.sensor("pinch_pos").data.copy()
             current_quat = self.data.sensor("pinch_quat").data.copy()
-
-            # Check that sensor readings are finite.
-            if (np.any(np.isnan(current_pos)) or np.any(np.isnan(current_quat)) or
-                np.any(np.isinf(current_pos)) or np.any(np.isinf(current_quat))):
+            if (
+                np.any(np.isnan(current_pos))
+                or np.any(np.isnan(current_quat))
+                or np.any(np.isinf(current_pos))
+                or np.any(np.isinf(current_quat))
+            ):
                 continue
 
-            # Compute the difference in position.
             pos_diff = np.linalg.norm(current_pos - desired_pos)
-            # Compute orientation difference using the dot-product of unit quaternions.
-            current_quat_norm = current_quat / np.linalg.norm(current_quat)
-            desired_quat_norm = desired_quat / np.linalg.norm(desired_quat)
-            dot = np.abs(np.dot(current_quat_norm, desired_quat_norm))
-            dot = np.clip(dot, -1.0, 1.0)
+            cq = current_quat / np.linalg.norm(current_quat)
+            dq = desired_quat / np.linalg.norm(desired_quat)
+            dot = float(np.clip(abs(np.dot(cq, dq)), -1.0, 1.0))
             orient_diff = 2 * np.arccos(dot)
 
-            pos_threshold = 0.1    
-            orient_threshold = 0.2    
+            if pos_diff < 0.1 and orient_diff < 0.2:
+                # Index fruits & stems via shared helper
+                (
+                    fruit_instances,
+                    ripe_ids,
+                    unripe_ids,
+                    stem_to_fruit,
+                ) = index_fruits_and_stems(self.model, ripe_mats=self.ripe_mats)
+                 # Normalise instance keys to ints (names like stem_1_2 don't matter; we use geom ids)
+                self.fruit_instances = {int(fid): inst for fid, inst in fruit_instances.items()}
+                self.ripe_ids = [int(i) for i in ripe_ids]
+                self.unripe_ids = [int(i) for i in unripe_ids]
+                self.stem_to_fruit = {int(k): int(v) for k, v in stem_to_fruit.items()}
 
-            if pos_diff < pos_threshold and orient_diff < orient_threshold:
-                self._index_fruits_and_stems()
-                print(f"ripe fruits at reset: {self.ripe_ids}")
-                return self._get_obs()
+                # Map ripe/unripe to red/green lists used by reward/deletion
+                self.red_blocks   = sorted(self.ripe_ids)
+                self.green_blocks = sorted(self.unripe_ids)
+
+                # Cache initial positions via representative fruit geom (first fruit geom)
+                self.red_positions   = {}
+                self.green_positions = {}
+
+                for fid in self.red_blocks:
+                    inst = self.fruit_instances.get(fid)
+                    if inst and getattr(inst, "fruit_geoms", None):
+                        gid = int(inst.fruit_geoms[0])
+                        self.red_positions[fid] = self.data.geom_xpos[gid].copy()
+
+                for fid in self.green_blocks:
+                    inst = self.fruit_instances.get(fid)
+                    if inst and getattr(inst, "fruit_geoms", None):
+                        gid = int(inst.fruit_geoms[0])
+                        self.green_positions[fid] = self.data.geom_xpos[gid].copy()
+
+                # Reset disappearance & potential-shaping bookkeeping
+                self._pending_removals = {}
+                self._grasped_pending = set()
+                self._blocks_picked = 0
+                self._prev_phi_red = 0.0
+                self._prev_phi_align = 0.0
+
+                return get_obs(self)
             else:
-                print(
-                    f"Reset attempt {attempt+1}: pose error too high "
-                    f"(pos_diff: {pos_diff:.4f}, orient_diff: {orient_diff:.4f}), retrying reset."
-                )
+                # print(f"Reset attempt {attempt}: pos={pos_diff:.4f} ori={orient_diff:.4f} -> retry")
                 if attempt > 100:
                     raise RuntimeError("Failed to achieve valid reset after multiple attempts")
 
-
     def step(self, action):
+        # Validate & clip
         if np.array(action).shape != self.action_space.shape:
             raise ValueError("Action dimension mismatch")
         action = np.clip(action, self.action_space.low, self.action_space.high)
-        # Scale actions (zyx because end effector frame z is along the gripper axis)
+
+        # Unpack action (end-effector coordinates are expressed in the EE frame)
         if self.ee_dof == 3:
             z, y, x, grasp = action
+            drot = None
         elif self.ee_dof == 4:
             z, y, x, yaw, grasp = action
-            roll, pitch = 0, 0
-            drot = np.array([roll, pitch, yaw]) * self.rot_scale
+            drot = np.array([0.0, 0.0, yaw]) * self.rot_scale
         elif self.ee_dof == 6:
             z, y, x, roll, pitch, yaw, grasp = action
             drot = np.array([roll, pitch, yaw]) * self.rot_scale
-        dpos = np.array([x, y, z]) * self.pos_scale
-        # Apply position change
-        pos = self.data.sensor("pinch_pos").data
-        current_quat = np.roll(self.data.sensor("pinch_quat").data, -1)
-        current_rotation = Rotation.from_quat(current_quat)
+        else:
+            raise ValueError("ee_dof must be 3, 4, or 6")
 
-        dpos_world = current_rotation.apply(dpos)
-        npos = np.clip(pos + dpos_world, *self._CARTESIAN_BOUNDS)
+        # Position update in world via current EE orientation
+        dpos_local = np.array([x, y, z], dtype=np.float32) * self.pos_scale
+        current_quat_xyzw = np.roll(self.data.sensor("pinch_quat").data, -1)
+        current_rot = Rotation.from_quat(current_quat_xyzw)
+        dpos_world = current_rot.apply(dpos_local)
+        npos = np.clip(self.data.sensor("pinch_pos").data + dpos_world, *self._CARTESIAN_BOUNDS)
         self.data.mocap_pos[0] = npos
 
-        if self.ee_dof > 3:
-            # Convert mujoco wxyz to scipy xyzw
-            current_quat = np.roll(self.data.sensor("pinch_quat").data, -1)
-            current_rotation = Rotation.from_quat(current_quat)
-            # Convert the action rotation to a Rotation object
-            action_rotation = Rotation.from_euler('xyz', drot)
-            # Apply the action rotation
-            new_rotation = action_rotation * current_rotation
-            # Calculate the new relative rotation
-            new_relative_rotation = self.initial_rotation.inv() * new_rotation
-            # Convert to euler angles and clip
-            relative_euler = new_relative_rotation.as_euler('xyz')
-            clipped_euler = np.clip(relative_euler, self._ROTATION_BOUNDS[0], self._ROTATION_BOUNDS[1])
-            # Convert back to rotation and apply to initial orientation
-            clipped_rotation = Rotation.from_euler('xyz', clipped_euler)
-            final_rotation = self.initial_rotation * clipped_rotation
-            # Set the final orientation
-            self.data.mocap_quat[0] = np.roll(final_rotation.as_quat(), 1)
+        # Orientation update (relative to initial orientation, with bounds)
+        if drot is not None:
+            current_rot = Rotation.from_quat(current_quat_xyzw)
+            action_rot = Rotation.from_euler("xyz", drot)
+            new_rot = action_rot * current_rot
+            rel_rot = self.initial_rotation.inv() * new_rot
+            rel_euler = rel_rot.as_euler("xyz")
+            clipped = np.clip(rel_euler, self._ROTATION_BOUNDS[0], self._ROTATION_BOUNDS[1])
+            final_rot = self.initial_rotation * Rotation.from_euler("xyz", clipped)
+            self.data.mocap_quat[0] = np.roll(final_rot.as_quat(), 1)  # xyzw -> wxyz
 
-        # --- Handle gripper and simulation ---
-        moving_gripper, target_sim_time = self._handle_gripper_control(action)
+        # Gripper control via helper
+        moving_gripper, target_t = handle_gripper_control(self, action)
 
+        # Physics integration: either hold until gripper motion done, or do substeps with opspace
         if self.discrete_gripper and self.gripper_pause and moving_gripper:
-            while self.data.time < target_sim_time:
-                tau = opspace(
-                model=self.model,
-                data=self.data,
-                site_id=self._pinch_site_id,
-                dof_ids=self._panda_dof_ids,
-                pos=self.data.mocap_pos[0],
-                ori=self.data.mocap_quat[0],
-                joint=self._PANDA_HOME,
-                gravity_comp=True,
-            )
-                self.data.ctrl[self._panda_ctrl_ids] = tau
-                mujoco.mj_step(self.model, self.data)
+            run_opspace_for_duration(self, until_time=target_t)
         else:
-            for i in range(self._n_substeps):
-                if i < self._n_substeps/5:
-                    continue
-                else:
-                    tau = opspace(
-                        model=self.model,
-                        data=self.data,
-                        site_id=self._pinch_site_id,
-                        dof_ids=self._panda_dof_ids,
-                        pos=self.data.mocap_pos[0],
-                        ori=self.data.mocap_quat[0],
-                        joint=self._PANDA_HOME,
-                        gravity_comp=True,
-                    )
-                    self.data.ctrl[self._panda_ctrl_ids] = tau
-                    mujoco.mj_step(self.model, self.data)
+            run_opspace_substeps(self, n_substeps=self._n_substeps, warmup_ratio=0.2)
 
-        # Observation
-        obs = self._get_obs()
+        # Observation via shared helper
+        obs = get_obs(self)
         if self.render_mode == "human":
             self.render()
 
         # Reward
-        reward, info = self._compute_reward(action)
-        if info['success'] == True:
-            terminated = True
-        else:
-            terminated = False
+        reward, info = compute_reward(self, action)
+        # make due fruit disappear
+        tick_removal_timers(self)
+
+        if self.reward_cfg.reward_type == "sparse":
+            info["dense_reward"] = reward
+            reward = 1.0 if info.get("r_grasp", 0.0) > 0 else 0.0
+        terminated = bool(info.get("success", False))
         self.prev_gripper_state = self.gripper_state
+        self.prev_action = action.copy()
+        return obs, reward, terminated, False, info
 
-        return obs, reward, terminated, False, info 
-    
     def render(self):
-        rendered_frames = []
-        for camera in self.cameras:
-            rendered_frames.append(
-                self._viewers[camera].render("rgb_array")
-            )
-        return rendered_frames
-    
-    def _handle_gripper_control(self, action: np.ndarray):
-        """
-        Determines gripper control value and state based on the action.
-        This method supports both discrete and continuous gripper control.
+        return [self._viewers[c].render("rgb_array") for c in self.cameras]
 
-        Args:
-            action (np.ndarray): The action array from the policy.
+    # ---------------------------
+    # Robot reset helpers
+    # ---------------------------
 
-        Returns:
-            Tuple[bool, float]: A tuple containing:
-                - moving_gripper (bool): True if a discrete grasp was initiated.
-                - target_sim_time (float): The simulation time to pause for a discrete grasp.
-        """
-        moving_gripper = False
-        target_sim_time = 0.0
-
-        if self.discrete_gripper:
-            grasp = action[-1]
-            if self.data.time - self.prev_grasp_time < self.gripper_sleep:
-                self.gripper_blocked = True
-                grasp = self.prev_grasp
-            else:
-                if grasp <= self.grasp_threshold and self.gripper_state == 0:
-                    self.gripper_vec = self.gripper_dict["open"]
-                    self.gripper_blocked = False
-                elif grasp >= -self.grasp_threshold and self.gripper_state == 1:
-                    self.gripper_vec = self.gripper_dict["closed"]
-                    self.gripper_blocked = False
-                elif grasp < -self.grasp_threshold and self.gripper_state == 1:
-                    self.data.ctrl[self._gripper_ctrl_id] = self._GRIPPER_MAX
-                    self.gripper_state = 0
-                    self.gripper_vec = self.gripper_dict["opening"]
-                    self.prev_grasp_time = self.data.time
-                    self.prev_grasp = grasp
-                    self.gripper_blocked = True
-                    moving_gripper = True
-                    target_sim_time = self.data.time + self.gripper_sleep
-                elif grasp > self.grasp_threshold and self.gripper_state == 0:
-                    self.data.ctrl[self._gripper_ctrl_id] = 0
-                    self.gripper_state = 1
-                    self.gripper_vec = self.gripper_dict["closing"]
-                    self.prev_grasp_time = self.data.time
-                    self.prev_grasp = grasp
-                    self.gripper_blocked = True
-                    moving_gripper = True
-                    target_sim_time = self.data.time + self.gripper_sleep
-        else:  # Continuous gripper control
-            grasp_action = action[-1]
-
-            gripper_speed = 0.005
-            prev_grasp_action = self.prev_action[-1]
-
-            current_gripper_pos = self.data.qpos[self._gripper_ctrl_id]
-            new_target_pos = current_gripper_pos + -grasp_action * gripper_speed
-            self.data.ctrl[self._gripper_ctrl_id] = np.clip(new_target_pos, 0.0, self._GRIPPER_MAX)
-        
-        return moving_gripper, target_sim_time
-    
-    def _get_vel(self):
-        """
-        Compute the Cartesian speed (linear and angular velocity) of the end-effector.
-        
-        Returns:
-            cartesian_speed: A (6,) numpy array where the first 3 elements are the
-                            linear velocities and the last 3 elements are the angular velocities.
-        """
-        dq = self.data.qvel[self._panda_dof_ids]
-        J_v = np.zeros((3, self.model.nv), dtype=np.float64)
-        J_w = np.zeros((3, self.model.nv), dtype=np.float64)
-        mujoco.mj_jacSite(self.model, self.data, J_v, J_w, self._pinch_site_id)
-        J_v, J_w = J_v[:, self._panda_dof_ids], J_w[:, self._panda_dof_ids]
-        J = np.vstack((J_v, J_w))
-        dx = J @ dq
-        return dx.astype(np.float32)
-
-    def _get_obs(self):
-        obs = {"state": {}}
-        
-        # --- TCP pose and velocity ---
-        tcp_world_pos = self.data.sensor("pinch_pos").data.copy()
-        # Ensure quaternion is in xyzw order for Rotation, then back to wxyz if needed by convention elsewhere
-        # MuJoCo sensors output wxyz, np.roll(q, -1) makes it xyzw
-        tcp_world_quat_xyzw = np.roll(self.data.sensor("pinch_quat").data, -1).copy() 
-        
-        if self.randomize_domain:
-            # Noise for position
-            # Use a default from cfg or a fallback value
-            position_noise_std = self.cfg.get("domain_randomization", {}).get("ee_pos_noise_std", 0.005) 
-            tcp_world_pos += self.np_random.normal(0, position_noise_std, size=3)
-            
-            # Noise for orientation
-            orientation_noise_std = self.cfg.get("domain_randomization", {}).get("ee_ori_noise_std", 0.005)
-            orientation_noise_axis_angle = self.np_random.normal(0, orientation_noise_std, size=3)
-            small_rotation = Rotation.from_rotvec(orientation_noise_axis_angle)
-            current_rotation = Rotation.from_quat(tcp_world_quat_xyzw) # Expects xyzw
-            new_rotation = small_rotation * current_rotation
-            tcp_world_quat_xyzw = new_rotation.as_quat() # Returns xyzw, normalized
-        
-        # Storing tcp_pose as [pos (3), quat_xyzw (4)]
-        obs["state"]["tcp_pose"] = np.concatenate([tcp_world_pos, tcp_world_quat_xyzw]).astype(np.float32)
-        obs["state"]["tcp_vel"] = self._get_vel() 
-        obs["state"]["gripper_pos"] = np.array([2 * self.data.qpos[8] / self._GRIPPER_HOME[0]], dtype=np.float32)
-        if self.discrete_gripper:
-            obs["state"]["gripper_vec"] = self.gripper_vec.astype(np.float32)
-
-        # --- Image observations ---
-        if self.image_obs:
-            obs["images"] = {}
-            for cam_name in self.cameras:
-                obs["images"][cam_name] = self._viewers[cam_name].render(render_mode="rgb_array")
-
-        if not self.image_obs:
-            strawberry_state_obs = self._get_strawberry_state_obs(tcp_world_pos)
-            obs["state"].update(strawberry_state_obs)
-        
-        if self.render_mode == "human":
-            self._viewers['wrist1'].render(self.render_mode)
-
-        return obs
-
-    
-    def _compute_reward(self, action):
-        reward = 0.0
-        info = {}
-        info['success'] = False
-        return reward, info
-    
-    def _index_fruits_and_stems(self):
-        """
-        Build indices:
-        - self.fruit_instances[idx] = {
-                "fruit_geoms": [gid, ...],
-                "calyx_geoms": [gid, ...],
-                "stem_geom": gid_or_None,
-                "fruit_body": bid_of_main_fruit_geom,
-                "ripe": bool,
-                "material": str
-            }
-        - self.ripe_ids   = sorted list of instance ids
-        - self.unripe_ids = sorted list of instance ids
-        - self.stem_to_fruit[stem_gid] = instance_id
-        """
-        model = self.model
-
-        # Collect geoms by name
-        fruit_candidates = []
-        calyx_candidates = []
-        stem_candidates  = []
-
-        for gid in range(int(model.ngeom)):
-            name = self._geom_name(gid)
-            print(f"Geom {gid}: {name}")
-            if name.startswith("fruit_"):
-                fruit_candidates.append(gid)
-            elif name.startswith("calyx_"):
-                calyx_candidates.append(gid)
-            elif name.startswith("stem"):
-                stem_candidates.append(gid)
-
-        # Quick index: which geoms live under a body
-        # (Also useful to climb ancestors from any fruit geom)
-        geom_bodyid = model.geom_bodyid
-
-        # Helper: find nearest stem geom by climbing parents
-        def nearest_stem_for_body(start_bid: int) -> int | None:
-            seen = set()
-            bid = int(start_bid)
-            while bid not in seen and bid >= 0:
-                seen.add(bid)
-                # iterate geoms attached to this body
-                g0 = int(model.body_geomadr[bid])
-                n  = int(model.body_geomnum[bid])
-                for k in range(n):
-                    gid = g0 + k
-                    gname = self._geom_name(gid)
-                    if gname.startswith("stem"):
-                        return gid
-                # climb up
-                bid = self._body_parent(bid)
-            return None
-
-        # Group by instance id
-        fruit_instances: dict[int, dict] = {}
-        # Add fruit geoms
-        for gid in fruit_candidates:
-            name = self._geom_name(gid)
-            inst = self._instance_key(name)
-            if inst is None:
-                continue
-            d = fruit_instances.setdefault(inst, {
-                "fruit_geoms": [],
-                "calyx_geoms": [],
-                "stem_geom": None,
-                "fruit_body": None,
-                "ripe": False,
-                "material": "",
-            })
-            d["fruit_geoms"].append(gid)
-            d["fruit_body"] = int(geom_bodyid[gid]) if d["fruit_body"] is None else d["fruit_body"]
-
-        # Add calyx geoms
-        for gid in calyx_candidates:
-            name = self._geom_name(gid)
-            inst = self._instance_key(name)
-            if inst is None or inst not in fruit_instances:
-                continue
-            fruit_instances[inst]["calyx_geoms"].append(gid)
-
-        # Attach a stem to each instance (nearest ancestor stem of any fruit geom)
-        for inst, d in fruit_instances.items():
-            stem_gid = None
-            if d["fruit_geoms"]:
-                any_fruit_gid = d["fruit_geoms"][0]
-                stem_gid = nearest_stem_for_body(int(geom_bodyid[any_fruit_gid]))
-            d["stem_geom"] = stem_gid
-
-        # Decide ripeness from the *fruit* material
-        ripe_ids = []
-        unripe_ids = []
-        for inst, d in fruit_instances.items():
-            # Prefer the first fruit geom’s material
-            mat_name = ""
-            if d["fruit_geoms"]:
-                mat_name = self._mat_name_for_geom(d["fruit_geoms"][0])
-            d["material"] = mat_name
-            d["ripe"] = self._is_ripe_material(mat_name)
-            (ripe_ids if d["ripe"] else unripe_ids).append(inst)
-
-        # Stem → fruit reverse map
-        stem_to_fruit = {}
-        for inst, d in fruit_instances.items():
-            if d["stem_geom"] is not None:
-                stem_to_fruit[int(d["stem_geom"])] = inst
-
-        # Export
-        self.fruit_instances = fruit_instances
-        self.ripe_ids = sorted(ripe_ids)
-        self.unripe_ids = sorted(unripe_ids)
-        self.stem_to_fruit = stem_to_fruit
-
-        # Debug print
-        print(f"[Index] fruits: {len(fruit_instances)} | ripe={len(self.ripe_ids)} unripe={len(self.unripe_ids)}")
-        if fruit_instances:
-            showcase = list(sorted(fruit_instances.keys()))[:5]
-            for inst in showcase:
-                d = fruit_instances[inst]
-                print(f"  - id {inst:>2}: ripe={d['ripe']} mat={d['material']} "
-                    f"fruit_geoms={len(d['fruit_geoms'])} calyx_geoms={len(d['calyx_geoms'])} stem_gid={d['stem_geom']}")
-                
-    def _instance_key(self, name: str) -> str | None:
-        """Return a stable per-fruit key like '1_3' for names 'fruit_1_3' / 'calyx_1_3'.
-        Fallback to last number if only one numeric token is present.
-        """
-        if not name:
-            return None
-        parts = name.split("_")
-        # prefer "<a>_<b>" if both trailing tokens are digits
-        if len(parts) >= 3 and parts[-1].isdigit() and parts[-2].isdigit():
-            return f"{parts[-2]}_{parts[-1]}"
-        # else just the last numeric token (old behavior)
-        if parts[-1].isdigit():
-            return parts[-1]
-        return None
-
-    # --- name helpers -------------------------------------------------
-    def _mj_name(self, objtype, objid) -> str:
-        try:
-            return mujoco.mj_id2name(self.model, objtype, int(objid)) or ""
-        except mujoco.Error:
-            return ""
-
-    def _geom_name(self, gid: int) -> str:
-        return self._mj_name(mujoco.mjtObj.mjOBJ_GEOM, gid)
-
-    def _mat_name_for_geom(self, gid: int) -> str:
-        mid = int(self.model.geom_matid[gid])
-        if mid < 0:
-            return ""
-        return self._mj_name(mujoco.mjtObj.mjOBJ_MATERIAL, mid)
-
-    def _body_parent(self, bid: int) -> int:
-        return int(self.model.body_parentid[bid])
-
-    def _is_ripe_material(self, mat_name: str) -> bool:
-        # adjust if you change your material scheme
-        return mat_name in self.ripe_mats
+    def _reset_arm_and_gripper(self) -> None:
+        self.data.qpos[self._panda_dof_ids] = self._PANDA_HOME
+        self.data.qpos[7:9] = self._GRIPPER_HOME
+        self.data.ctrl[self._gripper_ctrl_id] = self._GRIPPER_MAX
+        self.gripper_vec = self.gripper_dict["open"]
+        mujoco.mj_forward(self.model, self.data)
+        self.data.mocap_pos[0] = self.data.sensor("pinch_pos").data.copy()
+        self.data.mocap_quat[0] = self.data.sensor("pinch_quat").data.copy()
+        mujoco.mj_step(self.model, self.data)
