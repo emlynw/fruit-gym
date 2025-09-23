@@ -168,13 +168,13 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         self._GRIPPER_MIN = 0.0
         self._GRIPPER_MAX = 0.004
         self._PANDA_XYZ = np.array([0.1, 0, 0.8], dtype=np.float32)
-        self._CARTESIAN_BOUNDS = np.array([[0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
+        self._CARTESIAN_BOUNDS = np.array([[-0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.95])
         self.gripper_sleep = 0.6
 
         if config_path is None:
-            config_path = Path(__file__).parent.parent / "configs" / "strawb_hanging.yaml"
+            config_path = Path(__file__).parent.parent / "configs" / "strawb_hanging_old.yaml"
         self.cfg = load_config(config_path)
 
         state_space = Dict(
