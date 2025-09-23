@@ -80,6 +80,7 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         self.default_obj_pos = np.array([0.42, 0, 0.85])
         self.gripper_sleep = 0.6
         self.grasp_threshold = 0.333
+        self.ripe_mats = {"r1", "r2", "r3"}
 
         if config_path is None:
             config_path = Path(__file__).parent.parent / "configs" / "multi_strawb.yaml"
@@ -306,7 +307,8 @@ class TestEnv(MujocoEnv, utils.EzPickle):
             orient_threshold = 0.2    
 
             if pos_diff < pos_threshold and orient_diff < orient_threshold:
-
+                self._index_fruits_and_stems()
+                print(f"ripe fruits at reset: {self.ripe_ids}")
                 return self._get_obs()
             else:
                 print(
@@ -492,20 +494,6 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         J = np.vstack((J_v, J_w))
         dx = J @ dq
         return dx.astype(np.float32)
-    
-    def _index_fruits(self):
-        ripe_geom_ids = []
-        unripe_geom_ids = []
-        for i in range(self.model.ngeom):
-            geom_name = self.model.geom(i).name
-            if "fruit" in geom_name:
-                mat_id = self.model.geom_matid[i]
-            if mat_id in self.ripe_mat_ids:
-                ripe_geom_ids.append(i)
-            elif mat_id in self.unripe_mat_ids:
-                unripe_geom_ids.append(i)
-        return ripe_geom_ids, unripe_geom_ids
-
 
     def _get_obs(self):
         obs = {"state": {}}
@@ -558,3 +546,163 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         info = {}
         info['success'] = False
         return reward, info
+    
+    def _index_fruits_and_stems(self):
+        """
+        Build indices:
+        - self.fruit_instances[idx] = {
+                "fruit_geoms": [gid, ...],
+                "calyx_geoms": [gid, ...],
+                "stem_geom": gid_or_None,
+                "fruit_body": bid_of_main_fruit_geom,
+                "ripe": bool,
+                "material": str
+            }
+        - self.ripe_ids   = sorted list of instance ids
+        - self.unripe_ids = sorted list of instance ids
+        - self.stem_to_fruit[stem_gid] = instance_id
+        """
+        model = self.model
+
+        # Collect geoms by name
+        fruit_candidates = []
+        calyx_candidates = []
+        stem_candidates  = []
+
+        for gid in range(int(model.ngeom)):
+            name = self._geom_name(gid)
+            print(f"Geom {gid}: {name}")
+            if name.startswith("fruit_"):
+                fruit_candidates.append(gid)
+            elif name.startswith("calyx_"):
+                calyx_candidates.append(gid)
+            elif name.startswith("stem"):
+                stem_candidates.append(gid)
+
+        # Quick index: which geoms live under a body
+        # (Also useful to climb ancestors from any fruit geom)
+        geom_bodyid = model.geom_bodyid
+
+        # Helper: find nearest stem geom by climbing parents
+        def nearest_stem_for_body(start_bid: int) -> int | None:
+            seen = set()
+            bid = int(start_bid)
+            while bid not in seen and bid >= 0:
+                seen.add(bid)
+                # iterate geoms attached to this body
+                g0 = int(model.body_geomadr[bid])
+                n  = int(model.body_geomnum[bid])
+                for k in range(n):
+                    gid = g0 + k
+                    gname = self._geom_name(gid)
+                    if gname.startswith("stem"):
+                        return gid
+                # climb up
+                bid = self._body_parent(bid)
+            return None
+
+        # Group by instance id
+        fruit_instances: dict[int, dict] = {}
+        # Add fruit geoms
+        for gid in fruit_candidates:
+            name = self._geom_name(gid)
+            inst = self._instance_key(name)
+            if inst is None:
+                continue
+            d = fruit_instances.setdefault(inst, {
+                "fruit_geoms": [],
+                "calyx_geoms": [],
+                "stem_geom": None,
+                "fruit_body": None,
+                "ripe": False,
+                "material": "",
+            })
+            d["fruit_geoms"].append(gid)
+            d["fruit_body"] = int(geom_bodyid[gid]) if d["fruit_body"] is None else d["fruit_body"]
+
+        # Add calyx geoms
+        for gid in calyx_candidates:
+            name = self._geom_name(gid)
+            inst = self._instance_key(name)
+            if inst is None or inst not in fruit_instances:
+                continue
+            fruit_instances[inst]["calyx_geoms"].append(gid)
+
+        # Attach a stem to each instance (nearest ancestor stem of any fruit geom)
+        for inst, d in fruit_instances.items():
+            stem_gid = None
+            if d["fruit_geoms"]:
+                any_fruit_gid = d["fruit_geoms"][0]
+                stem_gid = nearest_stem_for_body(int(geom_bodyid[any_fruit_gid]))
+            d["stem_geom"] = stem_gid
+
+        # Decide ripeness from the *fruit* material
+        ripe_ids = []
+        unripe_ids = []
+        for inst, d in fruit_instances.items():
+            # Prefer the first fruit geom’s material
+            mat_name = ""
+            if d["fruit_geoms"]:
+                mat_name = self._mat_name_for_geom(d["fruit_geoms"][0])
+            d["material"] = mat_name
+            d["ripe"] = self._is_ripe_material(mat_name)
+            (ripe_ids if d["ripe"] else unripe_ids).append(inst)
+
+        # Stem → fruit reverse map
+        stem_to_fruit = {}
+        for inst, d in fruit_instances.items():
+            if d["stem_geom"] is not None:
+                stem_to_fruit[int(d["stem_geom"])] = inst
+
+        # Export
+        self.fruit_instances = fruit_instances
+        self.ripe_ids = sorted(ripe_ids)
+        self.unripe_ids = sorted(unripe_ids)
+        self.stem_to_fruit = stem_to_fruit
+
+        # Debug print
+        print(f"[Index] fruits: {len(fruit_instances)} | ripe={len(self.ripe_ids)} unripe={len(self.unripe_ids)}")
+        if fruit_instances:
+            showcase = list(sorted(fruit_instances.keys()))[:5]
+            for inst in showcase:
+                d = fruit_instances[inst]
+                print(f"  - id {inst:>2}: ripe={d['ripe']} mat={d['material']} "
+                    f"fruit_geoms={len(d['fruit_geoms'])} calyx_geoms={len(d['calyx_geoms'])} stem_gid={d['stem_geom']}")
+                
+    def _instance_key(self, name: str) -> str | None:
+        """Return a stable per-fruit key like '1_3' for names 'fruit_1_3' / 'calyx_1_3'.
+        Fallback to last number if only one numeric token is present.
+        """
+        if not name:
+            return None
+        parts = name.split("_")
+        # prefer "<a>_<b>" if both trailing tokens are digits
+        if len(parts) >= 3 and parts[-1].isdigit() and parts[-2].isdigit():
+            return f"{parts[-2]}_{parts[-1]}"
+        # else just the last numeric token (old behavior)
+        if parts[-1].isdigit():
+            return parts[-1]
+        return None
+
+    # --- name helpers -------------------------------------------------
+    def _mj_name(self, objtype, objid) -> str:
+        try:
+            return mujoco.mj_id2name(self.model, objtype, int(objid)) or ""
+        except mujoco.Error:
+            return ""
+
+    def _geom_name(self, gid: int) -> str:
+        return self._mj_name(mujoco.mjtObj.mjOBJ_GEOM, gid)
+
+    def _mat_name_for_geom(self, gid: int) -> str:
+        mid = int(self.model.geom_matid[gid])
+        if mid < 0:
+            return ""
+        return self._mj_name(mujoco.mjtObj.mjOBJ_MATERIAL, mid)
+
+    def _body_parent(self, bid: int) -> int:
+        return int(self.model.body_parentid[bid])
+
+    def _is_ripe_material(self, mat_name: str) -> bool:
+        # adjust if you change your material scheme
+        return mat_name in self.ripe_mats

@@ -102,6 +102,7 @@ class MeshVariantRandomiser(Randomiser):
 
                 chosen_mesh = id2mesh[inst]
                 if getattr(g, "mesh", None) != chosen_mesh:
+                    print(f"changing {gname} ({inst}) mesh {getattr(g,'mesh',None)} → {chosen_mesh}")
                     g.meshname = chosen_mesh
                     n_changed += 1
 

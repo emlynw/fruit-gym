@@ -48,26 +48,42 @@ domain_randomization:
   strawberry_texture:
     enabled: true
 
+  leaf_texture:
+    enabled: true
+
   objects_count:
     enabled: true
-    min_fruits: 4
-    max_fruits: 8
-    max_ripe: 3
+    fruit_xmls: ["strawb_stiff.xml", "strawb_fork.xml", "strawb_fork_double.xml"]
+    leaf_xmls: ["leaves_joints_new.xml"]
+    min_fruits: 2
+    max_fruits: 6
+    min_leaves: 2
+    max_leaves: 4
+    max_ripe: 5
     random_count: True
 
   strawberry_mesh:
     enabled: true
-    mesh_pool: ["sb1", "sb2", "sb3", "sb4", "sb5"]
+    mesh_pool: ["sb_1", "sb_2", "sb_3", "sb_4", "sb_5"]
+
+  calyx_mesh:
+    enabled: true
+    mesh_pool: ["calyx_1", "calyx_2", "calyx_3", "calyx_4", "calyx_5"]
+
+  leaf_mesh:
+    enabled: true
+    mesh_pool: ["leaf_1", "leaf_2", "leaf_3", "leaf_4", "leaf_5"]
 
   object_positions:
     enabled: true
     rotation_enabled: true
     yaw_only: true
     rotation_angle_range: [-0.05, 0.05]
-    position_range_low: [-0.06, -0.03, -0.02]
-    position_range_high: [0.06, 0.03, 0.02]
+    position_range_low: [-0.06, -0.1, -0.02]
+    position_range_high: [0.06, 0.1, 0.02]
 
   object_scale:
     enabled: true
-    scale_range: [0.8, 1.2]
+    fruit_scale_range: [0.5, 1.4]
+    leaf_scale_range: [0.3, 0.45]
 

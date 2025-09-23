@@ -12,7 +12,7 @@ def main():
     record = False
     camera_res = 480
     video_res = 480
-    cameras = ['wrist1', 'wrist2']
+    cameras = ['wrist1', 'wrist2', 'front']
     proprio_keys = ["tcp_pose", "gripper_pos"]
     display_res = (640, 640)
     fps = 20  # Frames per second for video recording
@@ -21,7 +21,7 @@ def main():
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
 
-    env = gym.make("TestEnv", randomize_domain=True, reward_type="dense", ee_dof=6, width=camera_res, height=camera_res, gripper_pause=False)
+    env = gym.make("TestEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, height=camera_res, gripper_pause=False)
     env = TimeLimit(env, max_episode_steps=250)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")

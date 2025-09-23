@@ -1,7 +1,7 @@
 
 from .base import Randomiser
 
-from .textures import SkyboxRandomiser, AssignBerryMaterialsRandomiser
+from .textures import SkyboxRandomiser, AssignBerryMaterialsRandomiser, EnsureMinRipeBerries
 from .lighting import LightingRandomiser
 from .fruit_pose import PoseRandomiser
 from .scale import ScaleRandomiser
@@ -15,6 +15,7 @@ __all__ = [
     "Randomiser",
     "SkyboxRandomiser",
     "AssignBerryMaterialsRandomiser",
+    "DebugSpecMaterials",
     "LightingRandomiser",
     "PoseRandomiser",
     "ScaleRandomiser",

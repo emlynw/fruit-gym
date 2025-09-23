@@ -5,7 +5,7 @@
     <flag multiccd="enable"/>
   </option>
 
-  <size memory="80M"/>
+  <size memory="800M"/>
 
   <visual>
     <global azimuth="120" elevation="-20"/>
@@ -18,27 +18,70 @@
     <texture type="skybox" name="sky_4" file="textures/skyboxes/sky_4.png" gridsize="3 4" gridlayout=".U..LFRB.D.."/>
     <texture type="2d" name="Grass001" file="textures/Grass001_2K-PNG_Color.png"/>
     <!-- Strawb Textures -->
-    <texture name="berry_tex_red"   type="2d" file="textures/strawberry_fixed_512.png"/>
+    <!-- <texture name="berry_tex_red"   type="2d" file="textures/strawberry_fixed_512.png"/>
     <texture name="berry_tex_green" type="2d" file="textures/strawberry_fixed_512_green.png"/>
-    <texture name="berry_tex_mix"   type="2d" file="textures/strawberry_fixed_512_mix.png"/>
+    <texture name="berry_tex_mix"   type="2d" file="textures/strawberry_fixed_512_mix.png"/> -->
+    <texture name="r1"   type="2d" file="textures_small/r1.png"/>
+    <texture name="r2"   type="2d" file="textures_small/r2.png"/>
+    <texture name="r3"   type="2d" file="textures_small/r3.png"/>
+    <texture name="u1"   type="2d" file="textures_small/u1.png"/>
+    <texture name="u2"   type="2d" file="textures_small/u2.png"/>
+    <texture name="u3"   type="2d" file="textures_small/u3.png"/>
+    <texture name="g1"   type="2d" file="textures_small/g1.png"/>
+    <texture name="g2"   type="2d" file="textures_small/g2.png"/>
+    <texture name="g3"   type="2d" file="textures_small/g3.png"/>
+    <texture name="calyx"   type="2d" file="textures_small/strawberry_leaves.png"/>
+    <texture name="leaf_g1"   type="2d" file="textures/leaf_g1.png"/>
+    <texture name="leaf_g2"   type="2d" file="textures/leaf_g2.png"/>
+    <texture name="leaf_s1"   type="2d" file="textures/leaf_s1.png"/>
+    <texture name="leaf_s2"   type="2d" file="textures/leaf_s2.png"/>
+    <texture name="leaf_s3"   type="2d" file="textures/leaf_s3.png"/>
 
     <!-- Strawb Materials -->
-    <material name="berry_mat_red"   texture="berry_tex_red"/>
+    <!-- <material name="berry_mat_red"   texture="berry_tex_red"/>
     <material name="berry_mat_green" texture="berry_tex_green"/>
-    <material name="berry_mat_mix"   texture="berry_tex_mix"/>
+    <material name="berry_mat_mix"   texture="berry_tex_mix"/> -->
+    <material name="r1" texture="r1"/>
+    <material name="r2" texture="r2"/>
+    <material name="r3" texture="r3"/>
+    <material name="u1" texture="u1"/>
+    <material name="u2" texture="u2"/>
+    <material name="u3" texture="u3"/>
+    <material name="g1" texture="g1"/>
+    <material name="g2" texture="g2"/>
+    <material name="g3" texture="g3"/>
+    <material name="calyx" texture="calyx"/>
     <material name="floor" texture="Grass001" specular="1" shininess="1"/>
+    <material name="leaf_g1" texture="leaf_g1"/>
+    <material name="leaf_g2" texture="leaf_g2"/>
+    <material name="leaf_s1" texture="leaf_s1"/>
+    <material name="leaf_s2" texture="leaf_s2"/>
+    <material name="leaf_s3" texture="leaf_s3"/>
 
-    <mesh name="sb1" file="sb1.obj" scale="1 1 1"/>
-    <mesh name="sb2" file="sb2.obj" scale="1 1 1"/>
-    <mesh name="sb3" file="sb3.obj" scale="1 1 1"/>
-    <mesh name="sb4" file="sb4.obj" scale="1 1 1"/>
-    <mesh name="sb5" file="sb5.obj" scale="1 1 1"/>
+    <mesh name="sb_1" file="sb1.obj" scale="1 1 1"/>
+    <mesh name="sb_2" file="sb2.obj" scale="1 1 1"/>
+    <mesh name="sb_3" file="sb3.obj" scale="1 1 1"/>
+    <mesh name="sb_4" file="sb4.obj" scale="1 1 1"/>
+    <mesh name="sb_5" file="sb5.obj" scale="1 1 1"/>
+    <mesh name="calyx_1" file="calyx1.obj" scale="1 1 1"/>
+    <mesh name="calyx_2" file="calyx2.obj" scale="1 1 1"/>
+    <mesh name="calyx_3" file="calyx3.obj" scale="1 1 1"/>
+    <mesh name="calyx_4" file="calyx4.obj" scale="1 1 1"/>
+    <mesh name="calyx_5" file="calyx5.obj" scale="1 1 1"/>
+    <mesh name="leaf_1" file="leaf_1.obj" scale="1 1 1"/>
+    <mesh name="leaf_2" file="leaf_2.obj" scale="1 1 1"/>
+    <mesh name="leaf_3" file="leaf_3.obj" scale="1 1 1"/>
+    <mesh name="leaf_4" file="leaf_4.obj" scale="1 1 1"/>
+    <mesh name="leaf_5" file="leaf_5.obj" scale="1 1 1"/>
   </asset>
 
   <worldbody>
     <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="floor" group="3"/>
     <body name="light0" pos="0.3 0 1.6">
       <light pos="0 0 0" dir="0 0 -1" ambient="0.1 0.1 0.1" diffuse="0.2 0.2 0.2"/>
+    </body>
+    <body name="front" pos="1.040 1.211 0.499" xyaxes="-0.811 0.585 -0.000 -0.007 -0.010 1.000">
+      <camera name="front" pos="0 0 0" fovy="41"/>
     </body>
 
     <body name="target" pos="0.15 0 0.5" quat="1 0 0 0" mocap="true">

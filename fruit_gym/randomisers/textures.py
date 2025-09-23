@@ -110,23 +110,71 @@ class SkyboxRandomiser(Randomiser):
 
 class AssignBerryMaterialsRandomiser(Randomiser):
     """
-    After compile, assign each strawberry visual geom a random material from
-    ['berry_mat_red', 'berry_mat_green', 'berry_mat_mix'] that you define in scene.xml.
+    After compile, assign each target geom a random material from `material_names`.
+
+    name_match can be:
+      - str: substring must appear in the geom name
+      - list/tuple[str]: ANY of the substrings may match
+      - dict: advanced matching:
+          {"all": ["block", "visual"]}        # all substrings must appear
+          {"any": ["block_visual", "block1_visual"]}
+          {"prefix": ["block_visual", "block1_visual"]}
+          {"suffix": ["_visual", "_display"]}
+          {"regex": r"^(block(_visual\d+)?|berry_visual)$"}
+      - callable: fn(geom_name: str) -> bool
     """
+
     affects_spec = False
     needs_ctx = False
 
     def __init__(self, material_names=None, name_match="block_visual"):
         self.material_names = material_names or ["berry_mat_red", "berry_mat_green", "berry_mat_mix"]
-        self.name_match = name_match.lower()
+        self._test = self._make_name_tester(name_match)
 
+    # ---------- matching helpers ----------
     @staticmethod
-    def _looks_like_block_visual(name: str) -> bool:
-        n = (name or "").lower()
-        return ("block_visual" in n) or (n.startswith("block") and "visual" in n)
+    def _make_name_tester(name_match):
+        # callable provided
+        if callable(name_match):
+            return lambda n: bool(name_match(n or ""))
 
+        # regex
+        if isinstance(name_match, dict) and "regex" in name_match:
+            import re
+            rx = re.compile(name_match["regex"])
+            return lambda n: bool(rx.search((n or "").lower()))
+
+        # dict forms
+        if isinstance(name_match, dict):
+            def tester(n):
+                s = (n or "").lower()
+                if "all" in name_match and not all(sub.lower() in s for sub in name_match["all"]):
+                    return False
+                if "any" in name_match and not any(sub.lower() in s for sub in name_match["any"]):
+                    return False
+                if "prefix" in name_match:
+                    prefs = tuple(p.lower() for p in name_match["prefix"])
+                    if not s.startswith(prefs):
+                        return False
+                if "suffix" in name_match:
+                    sufs = tuple(x.lower() for x in name_match["suffix"])
+                    if not s.endswith(sufs):
+                        return False
+                return True
+            return tester
+
+        # list/tuple → any substring
+        if isinstance(name_match, (list, tuple)):
+            subs = tuple(x.lower() for x in name_match)
+            return lambda n: any(sub in (n or "").lower() for sub in subs)
+
+        # str → single substring
+        sub = str(name_match).lower()
+        return lambda n: sub in (n or "").lower()
+
+    # ---------- main ----------
     def apply(self, *, spec, model, data, rng, ctx=None):
-        # Resolve material IDs that actually exist in the compiled model
+        # resolve material IDs present in the compiled model
         mat_ids = []
         for name in self.material_names:
             try:
@@ -142,7 +190,93 @@ class AssignBerryMaterialsRandomiser(Randomiser):
         n = 0
         for gid in range(int(model.ngeom)):
             gname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
-            if self._looks_like_block_visual(gname):
+            if self._test(gname):
                 model.geom_matid[gid] = int(rng.choice(mat_ids))
                 n += 1
         print(f"[BerryAssign] Rebound {n} geoms to random berry materials.")
+
+
+class EnsureMinRipeBerries(Randomiser):
+    """
+    Model-pass: ensure at least `min_ripe` fruit instances use a 'ripe' material.
+
+    - Matches geoms by name (default: names containing 'block').
+    - Groups by trailing numeric suffix so both halves of the berry (block_1_N, block_2_N)
+      get updated together to the same ripe material (one of r1, r2, r3 by default).
+    """
+    affects_spec = False
+    needs_ctx = False
+
+    def __init__(self,
+                 ripe_materials = ("r1", "r2", "r3"),
+                 name_match = "block",         # which geoms count as berry visuals
+                 min_ripe: int = 2):
+        self.ripe_materials = tuple(ripe_materials)
+        self.name_match = str(name_match).lower()
+        self.min_ripe = int(min_ripe)
+
+    @staticmethod
+    def _instance_id(name: str) -> str | None:
+        if "_" not in (name or ""):
+            return None
+        tail = name.rsplit("_", 1)[1]
+        return tail if tail.isdigit() else None
+
+    def _looks_like_target(self, name: str) -> bool:
+        return self.name_match in (name or "").lower()
+
+    def apply(self, *, spec, model, data, rng, ctx=None):
+        # Resolve ripe material IDs that actually exist
+        ripe_mat_ids = []
+        for nm in self.ripe_materials:
+            try:
+                ripe_mat_ids.append(int(mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_MATERIAL, nm)))
+            except mujoco.Error:
+                pass
+        if not ripe_mat_ids:
+            print(f"[MinRipe] No ripe materials found among {self.ripe_materials}; skipping.")
+            return
+
+        # Gather target geoms per fruit instance
+        inst2gids: dict[str | None, list[int]] = {}
+        for gid in range(int(model.ngeom)):
+            gname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
+            if not self._looks_like_target(gname):
+                continue
+            inst = self._instance_id(gname)
+            inst2gids.setdefault(inst, []).append(gid)
+
+        if not inst2gids:
+            print("[MinRipe] No target geoms found; skipping.")
+            return
+
+        ripe_set = set(ripe_mat_ids)
+        # Which instances are already ripe?
+        ripe_insts = []
+        non_ripe_insts = []
+        for inst, gids in inst2gids.items():
+            # Consider the instance ripe if ANY of its geoms is ripe
+            if any(int(model.geom_matid[g]) in ripe_set for g in gids):
+                ripe_insts.append(inst)
+            else:
+                non_ripe_insts.append(inst)
+
+        need = max(0, self.min_ripe - len(ripe_insts))
+        if need == 0:
+            print(f"[MinRipe] Already have {len(ripe_insts)} ripe instances (>= {self.min_ripe}); noop.")
+            return
+
+        # Promote some non-ripe instances to ripe
+        if need > len(non_ripe_insts):
+            need = len(non_ripe_insts)  # best effort
+        to_promote = list(rng.choice(non_ripe_insts, size=need, replace=False))
+
+        changed = 0
+        for inst in to_promote:
+            gids = inst2gids.get(inst, [])
+            chosen_mat = int(rng.choice(ripe_mat_ids))
+            for gid in gids:
+                model.geom_matid[gid] = chosen_mat
+                changed += 1
+
+        print(f"[MinRipe] Promoted {len(to_promote)} instances to ripe; reassigned {changed} geoms.")

@@ -22,6 +22,7 @@ from fruit_gym.randomisers import (
     Randomiser,
     SkyboxRandomiser,
     AssignBerryMaterialsRandomiser,
+    EnsureMinRipeBerries,
     LightingRandomiser,
     PoseRandomiser,
     ScaleRandomiser,
@@ -91,19 +92,33 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
     # ---------------- spawner ----------------------------------------------
     if dr.get("objects_count", {}).get("enabled", False):
         s_cfg = dr["objects_count"]
-
-        raw_choices = s_cfg.get("xml_choices")
-        if raw_choices is None:
-            raw_choices = ["strawb_stiff.xml", "strawb_fork.xml", "leaves.xml"]
-
-        xml_choices = [Path(xml_dir) / name for name in raw_choices]
+        
+        fruit_xmls = s_cfg.get("fruit_xmls")
+        if fruit_xmls is None:
+            fruit_xmls = ["strawb_stiff.xml", "strawb_fork.xml", "strawb_fork_double.xml"]
+        fruit_xmls = [Path(xml_dir) / name for name in fruit_xmls]
 
         rand.append(
             SpawnerRandomiser(
-                xml_choices=xml_choices,
+                xml_choices=fruit_xmls,
                 min_count=s_cfg.get("min_fruits", 4),
                 max_count=s_cfg.get("max_fruits", 8),
                 mount_prefix=s_cfg.get("mount_prefix", "vine_"),
+                ensure_min_fruit=s_cfg.get("max_ripe", 2),  # ensure at least this many ripe berries
+            )
+        )
+
+        leaf_xmls = s_cfg.get("leaf_xmls")
+        if leaf_xmls is None:
+            leaf_xmls = ["leaves_joints_new.xml"]
+        leaf_xmls = [Path(xml_dir) / name for name in leaf_xmls]
+        rand.append(
+            SpawnerRandomiser(
+                xml_choices=leaf_xmls,
+                min_count=s_cfg.get("min_leaves", 2),
+                max_count=s_cfg.get("max_leaves", 6),
+                mount_prefix="leaves_",
+                ensure_min_fruit=0,  # ensure at least this many ripe berries
             )
         )
 
@@ -112,9 +127,29 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
         mv_cfg = dr["strawberry_mesh"]
         rand.append(
             MeshVariantRandomiser(
-                geom_prefixes=tuple(mv_cfg.get("geom_prefixes", ["block"])),
+                geom_prefixes=tuple(mv_cfg.get("geom_prefixes", ["fruit"])),
                 mesh_pool=mv_cfg.get("mesh_pool"),  # e.g. ["strawberry_1","strawberry_2","strawberry_3"]
                 mesh_name_prefix=mv_cfg.get("mesh_name_prefix", "strawberry_"),
+            )
+        )
+
+    if dr.get("calyx_mesh", {}).get("enabled", False):
+        cm_cfg = dr["calyx_mesh"]
+        rand.append(
+            MeshVariantRandomiser(
+                geom_prefixes=tuple(cm_cfg.get("geom_prefixes", ["calyx"])),  # target geoms named calyx1, calyx2, ...
+                mesh_pool=cm_cfg.get("mesh_pool"),                             # e.g., ["calyx1","calyx2","calyx3"]
+                mesh_name_prefix=cm_cfg.get("mesh_name_prefix", "calyx"),      # or auto-discover by prefix
+            )
+        )
+
+    if dr.get("leaf_mesh", {}).get("enabled", False):
+        lm_cfg = dr["leaf_mesh"]
+        rand.append(
+            MeshVariantRandomiser(
+                geom_prefixes=tuple(lm_cfg.get("geom_prefixes", ["leaf"])),  # target geoms named leaf1, leaf2, ...
+                mesh_pool=lm_cfg.get("mesh_pool"),                             # e.g., ["leaf1","leaf2","leaf3"]
+                mesh_name_prefix=lm_cfg.get("mesh_name_prefix", "leaf"),      # or auto-discover by prefix
             )
         )
 
@@ -132,11 +167,19 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
     # ---------------- object scale -----------------------------------------
     if dr.get("object_scale", {}).get("enabled", False):
         s_cfg = dr["object_scale"]
-        scale_range = tuple(s_cfg.get("scale_range", [0.8, 1.2]))
+        fruit_scale_range = tuple(s_cfg.get("fruit_scale_range", [0.6, 1.4]))
         rand.append(
             ScaleRandomiser(
-                prefixes=["strawberry", "strawberry_leaves"],
-                scale_range=scale_range,
+                prefixes=["sb", "calyx"],
+                scale_range=fruit_scale_range,
+            )
+        )
+        # Scale leaves too
+        leaf_scale_range = tuple(s_cfg.get("leaf_scale_range", [0.3, 0.5]))
+        rand.append(
+            ScaleRandomiser(
+                prefixes=["leaf"],
+                scale_range=leaf_scale_range,
             )
         )
 
@@ -144,7 +187,35 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
     if dr.get("strawberry_texture", {}).get("enabled", False):
         rand.append(
             AssignBerryMaterialsRandomiser(
-                material_names=["berry_mat_red", "berry_mat_green", "berry_mat_mix"]
+                # material_names=["berry_mat_red", "berry_mat_green", "berry_mat_mix"]
+                material_names=["r1", "r2", "r3", "g1", "g2", "g3", "u1", "u2", "u3"],
+                name_match="fruit"
+            )
+        )
+
+        # Ensure at least two 'ripe' berries exist
+        rand.append(
+            EnsureMinRipeBerries(
+                ripe_materials=("r1","r2","r3"),
+                name_match="fruit",
+                min_ripe=2,
+            )
+        )
+
+    if dr.get("strawberry_texture", {}).get("enabled", False):
+        rand.append(
+            AssignBerryMaterialsRandomiser(
+                # material_names=["berry_mat_red", "berry_mat_green", "berry_mat_mix"]
+                material_names=["calyx"],
+                name_match="calyx"
+            )
+        )
+
+    if dr.get("leaf_texture", {}).get("enabled", False):
+        rand.append(
+            AssignBerryMaterialsRandomiser(
+                material_names=["leaf_g1", "leaf_g2", "leaf_s1", "leaf_s2", "leaf_s3"],
+                name_match="leaf"
             )
         )
 

@@ -18,9 +18,9 @@
     <material name="strawberry_leaves"   texture="strawb_leaves"   shininess="0.1"  specular="0.1"  reflectance="0.5"  texuniform="true"/>
     <material name="strawberry_material_green"   texture="strawb_green"   shininess="0.1"  specular="0.1"  reflectance="0.5"  texuniform="true"/>
 
-    <mesh name="strawberry"            file="sb5_new.obj"           scale="1 1 1"/>
+    <mesh name="strawberry"            file="sb5.obj"           scale="1 1 1"/>
     <mesh name="strawberry_leaves"     file="strawberry_leaves_origin.obj"    scale="1 1 1"/>
-    <mesh name="strawberry_collision"  file="sb5_new.obj" scale="1 1 1"/>
+    <mesh name="strawberry_collision"  file="sb5.obj" scale="1 1 1"/>
     <mesh name="strawberry_small"     file="strawberry_origin.obj"    scale="0.8 0.8 0.6"/> 
     <mesh name="strawberry_leaves_small"     file="strawberry_leaves_origin.obj"    scale="0.8 0.8 0.6"/>
     <mesh name="strawberry_collision_small"  file="strawberry_collision_origin.obj" scale="0.8 0.8 0.6"/>

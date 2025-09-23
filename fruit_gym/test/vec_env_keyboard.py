@@ -22,7 +22,7 @@ def mouse_callback(event, x, y, flags, param):
 def main():
     # --- Configuration ---
     record = False
-    num_envs = 5  # Number of parallel environments (Recommend >= 2)
+    num_envs = 8  # Number of parallel environments (Recommend >= 2)
     camera_res = 480
     video_res = 480
     cameras = ['wrist1', 'wrist2']
@@ -63,6 +63,7 @@ def main():
         ee_dof=4,
         width=camera_res,
         height=camera_res,
+        physics_dt=0.001,
         gripper_pause=False,
         wrappers=wrapper_list,
     )
