@@ -127,11 +127,13 @@ class RotateImage(gym.ObservationWrapper):
 class SERLObsWrapper(gym.ObservationWrapper):
     """
     This observation wrapper treat the observation space as a dictionary
-    of a flattened state space and the images.
+    of a flattened state space and the images. separate privileged state space
+    if it exists, for asymmetric RL.
     """
 
-    def __init__(self, env, proprio_keys=None):
+    def __init__(self, env, proprio_keys=None, priv_proprio_keys=None):
         super().__init__(env)
+
         self.proprio_keys = proprio_keys
         if self.proprio_keys is None:
             self.proprio_keys = list(self.env.observation_space["state"].keys())
@@ -143,22 +145,42 @@ class SERLObsWrapper(gym.ObservationWrapper):
         self.observation_space = gym.spaces.Dict(
             {
                 "state": flatten_space(self.proprio_space),
-                **(self.env.observation_space["images"]),
+                **(self.env.observation_space.get("images", {})),
             }
         )
 
+        self.has_priv_state = "priv_state" in self.env.observation_space.keys()
+        if self.has_priv_state:
+            self.priv_proprio_keys = priv_proprio_keys
+            if self.priv_proprio_keys is None:
+                self.priv_proprio_keys = list(self.env.observation_space["priv_state"].keys())
+
+            self.priv_proprio_space = gym.spaces.Dict(
+                {key: self.env.observation_space["priv_state"][key] for key in self.priv_proprio_keys}
+            )
+            self.observation_space["priv_state"] = flatten_space(self.priv_proprio_space)
+
     def observation(self, obs):
-        obs = {
+        new_obs = {
             "state": flatten(
                 self.proprio_space,
                 {key: obs["state"][key] for key in self.proprio_keys},
             ),
-            **(obs["images"]),
+            **(obs.get("images", {})),
         }
-        return obs
+        if self.has_priv_state:
+            new_obs["priv_state"] = flatten(
+                self.priv_proprio_space,
+                {key: obs["priv_state"][key] for key in self.priv_proprio_keys},
+            )
+
+        return new_obs
 
     def reset(self, **kwargs):
-        obs, info =  self.env.reset(**kwargs)
+        """
+        Resets the environment and returns the initial observation.
+        """
+        obs, info = self.env.reset(**kwargs)
         return self.observation(obs), info
 
 def flatten_observations(obs, proprio_space, proprio_keys):

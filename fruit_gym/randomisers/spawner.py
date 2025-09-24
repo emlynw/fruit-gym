@@ -121,12 +121,9 @@ class SpawnerRandomiser(Randomiser):
         next_idx = 0
         base_dir = self._choices[0].parent
 
-        print(f"[Spawner] spawning {count} vines")
-
         # 1) primary spawns
         for i in range(count):
             choice_path = Path(rng.choice(self._choices))
-            print(f"[Spawner]  -> pick {choice_path.name}")
             vine_spec = mujoco.MjSpec.from_file(str(choice_path))
 
             # bring over any unique assets (usually no-op in your new setup)
@@ -143,7 +140,6 @@ class SpawnerRandomiser(Randomiser):
         # 2) ensure minimum number of fruits present
         if fruit_seen < self._ensure_min_fruit:
             need = self._ensure_min_fruit - fruit_seen
-            print(f"[Spawner] Need {need} more fruit instance(s); adding fallback vine(s).")
 
             # pick a fallback file name
             pick = rng.choice(self._fallback_names)
@@ -166,7 +162,6 @@ class SpawnerRandomiser(Randomiser):
                     if _spec_has_fruit(vine_spec):
                         added_fruit += 1
                     _attach_with_suffix(spec, vine_spec, next_idx, self._mount_prefix)
-                    print(f"[Spawner]  -> fallback add {name}")
                     next_idx += 1
 
                 if added_fruit >= need:

@@ -36,4 +36,3 @@ class ScaleRandomiser(Randomiser):
 
                 factor = id2factor[inst]
                 mesh.scale = (np.ones(3) if mesh.scale is None else mesh.scale) * factor
-                print(f"[Scale] mesh '{mesh.name}' (id '{inst}') scaled by {factor:.3f}")

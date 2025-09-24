@@ -104,6 +104,10 @@ def _rep_pos(env, fruit_id: int, rep_geom: dict):
 # Privileged info (no sensors)
 # -----------------------
 
+def get_privileged_info(env) -> dict:
+    """Public accessor for asymmetric RL critics."""
+    return _compute_privileged_info(env)
+
 def _compute_privileged_info(env) -> dict:
     _MAX_DIST = 1.0
 

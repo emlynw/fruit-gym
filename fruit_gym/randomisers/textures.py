@@ -193,8 +193,6 @@ class AssignBerryMaterialsRandomiser(Randomiser):
             if self._test(gname):
                 model.geom_matid[gid] = int(rng.choice(mat_ids))
                 n += 1
-        print(f"[BerryAssign] Rebound {n} geoms to random berry materials.")
-
 
 class EnsureMinRipeBerries(Randomiser):
     """
@@ -263,7 +261,6 @@ class EnsureMinRipeBerries(Randomiser):
 
         need = max(0, self.min_ripe - len(ripe_insts))
         if need == 0:
-            print(f"[MinRipe] Already have {len(ripe_insts)} ripe instances (>= {self.min_ripe}); noop.")
             return
 
         # Promote some non-ripe instances to ripe
@@ -279,4 +276,3 @@ class EnsureMinRipeBerries(Randomiser):
                 model.geom_matid[gid] = chosen_mat
                 changed += 1
 
-        print(f"[MinRipe] Promoted {len(to_promote)} instances to ripe; reassigned {changed} geoms.")

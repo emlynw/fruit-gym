@@ -31,7 +31,7 @@ from .control import (
 )
 from .observation import get_obs
 from .indexing import index_fruits_and_stems
-from .reward import compute_reward, RewardConfig
+from .reward import compute_reward, RewardConfig, get_privileged_info
 from .mujoco_utils import tick_removal_timers
 from fruit_gym.controllers.opspace import opspace
 from fruit_gym.randomisers.factory import build_randomisers
@@ -68,10 +68,15 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         rot_scale: float = 0.5,
         cameras: Optional[List[str]] = None,
         reward_type: str = "dense",
+        reward_scales: Optional[dict] = None,
+        use_potential_rewards: bool = False,
+        shaping_gamma: float = 0.99,
+        disappear_delay_steps: int = 20,
         gripper_pause: bool = False,
         discrete_gripper: bool = True,
         render_mode: str = "rgb_array",
         config_path: Optional[Union[str, Path]] = None,
+        include_privileged_obs: bool = False,
         **kwargs,
     ):
         utils.EzPickle.__init__(self, image_obs=image_obs, **kwargs)
@@ -100,8 +105,15 @@ class TestEnv(MujocoEnv, utils.EzPickle):
         self.reward_type = reward_type
         self.gripper_pause = gripper_pause
         self.discrete_gripper = discrete_gripper
+        self.include_privileged_obs = include_privileged_obs
 
-        self.reward_cfg = RewardConfig(reward_type=self.reward_type)  # tweak later if you want
+        self.reward_cfg = RewardConfig(
+            reward_type=reward_type,
+            disappear_delay_steps=disappear_delay_steps,
+            reward_scales=reward_scales,
+            use_potential_rewards=use_potential_rewards,
+            shaping_gamma=shaping_gamma,
+        )
         self._pending_removals = {}
         self._grasped_pending = set()
         self._blocks_picked = 0
@@ -126,6 +138,22 @@ class TestEnv(MujocoEnv, utils.EzPickle):
             state_space["gripper_vec"] = Box(0, 1, shape=(4,), dtype=np.float32)
 
         self.observation_space = Dict({"state": Dict(state_space)})
+
+        #   Privileged head for asymmetric RL critics
+        if self.include_privileged_obs:
+            priv_space = Dict({
+                "min_red_distance":              Box(0, np.inf, shape=(1,), dtype=np.float32),
+                "gripper_alignment_quality":     Box(0, np.inf, shape=(1,), dtype=np.float32),
+                "good_grasp_detected":           Box(0.0, 1.0, shape=(1,), dtype=np.float32),
+                "bad_grasp_detected":            Box(0.0, 1.0, shape=(1,), dtype=np.float32),
+                "collision_detected":            Box(0.0, 1.0, shape=(1,), dtype=np.float32),
+                "red_stems_in_box_count":        Box(0, 255, shape=(1,), dtype=np.float32),
+                "green_stems_in_box_count":      Box(0, 255, shape=(1,), dtype=np.float32),
+                "left_finger_contacts":          Box(0, 255, shape=(1,), dtype=np.float32),
+                "right_finger_contacts":         Box(0, 255, shape=(1,), dtype=np.float32),
+                "total_distractor_displacement": Box(0, np.inf, shape=(1,), dtype=np.float32),
+            })
+            self.observation_space["priv_state"] = priv_space
         if image_obs:
             self.observation_space["images"] = Dict()
             for cam in self.cameras:
@@ -422,6 +450,12 @@ class TestEnv(MujocoEnv, utils.EzPickle):
             run_opspace_for_duration(self, until_time=target_t)
         else:
             run_opspace_substeps(self, n_substeps=self._n_substeps, warmup_ratio=0.2)
+
+        if self.include_privileged_obs:
+            self.current_privileged_info = get_privileged_info(self)
+        else:
+            # still let reward() recompute internally if it wants
+            self.current_privileged_info = None
 
         # Observation via shared helper
         obs = get_obs(self)

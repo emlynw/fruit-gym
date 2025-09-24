@@ -5,6 +5,7 @@ from typing import Dict as TDict, Any
 import numpy as np
 import mujoco
 from scipy.spatial.transform import Rotation
+from .reward import get_privileged_info
 
 
 def get_vel(env) -> np.ndarray:
@@ -55,6 +56,25 @@ def get_obs(env) -> TDict[str, Any]:
     obs["state"]["gripper_pos"] = np.array([2 * env.data.qpos[8] / env._GRIPPER_HOME[0]], dtype=np.float32)
     if env.discrete_gripper:
         obs["state"]["gripper_vec"] = env.gripper_vec.astype(np.float32)
+
+    # --- Privileged (critic-only) ---
+    if getattr(env, "include_privileged_obs", False):
+        # Cache-once-per-step if available; otherwise compute here
+        priv = getattr(env, "current_privileged_info", None)
+        if priv is None:
+            priv = get_privileged_info(env)
+        obs["priv_state"] = {
+            "min_red_distance":              np.array([priv["min_red_dist"]], dtype=np.float32),
+            "gripper_alignment_quality":     np.array([priv["radial_dist"]], dtype=np.float32),
+            "good_grasp_detected":           np.array([float(priv["good_grasp"])], dtype=np.float32),
+            "bad_grasp_detected":            np.array([float(priv["bad_grasp"])], dtype=np.float32),
+            "collision_detected":            np.array([float(priv["collision_detected"])], dtype=np.float32),
+            "red_stems_in_box_count":        np.array([priv["red_stems_in_box_count"]], dtype=np.float32),
+            "green_stems_in_box_count":      np.array([priv["green_stems_in_box_count"]], dtype=np.float32),
+            "left_finger_contacts":          np.array([priv["left_finger_contacts"]], dtype=np.float32),
+            "right_finger_contacts":         np.array([priv["right_finger_contacts"]], dtype=np.float32),
+            "total_distractor_displacement": np.array([priv["total_displacement"]], dtype=np.float32),
+        }
 
     # --- Images ---
     if env.image_obs:

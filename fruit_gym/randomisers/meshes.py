@@ -44,7 +44,6 @@ class MeshVariantRandomiser(Randomiser):
     def _discover_mesh_pool(self, spec: mujoco.MjSpec) -> list[str]:
         pool = [m.name for m in spec.meshes if m.name and m.name.startswith(self.mesh_name_prefix)]
         pool = sorted(set(pool))
-        print(f"[MeshVariant] discovered {len(pool)} meshes with prefix '{self.mesh_name_prefix}': {pool[:8]}{' …' if len(pool)>8 else ''}")
         return pool
     
     def set_geom_mesh(geom, new_mesh_name: str):
@@ -63,7 +62,6 @@ class MeshVariantRandomiser(Randomiser):
         # Build candidate mesh list
         if self.mesh_pool:
             mesh_names = list(self.mesh_pool)
-            print(f"[MeshVariant] using explicit mesh_pool: {mesh_names}")
         else:
             mesh_names = self._discover_mesh_pool(spec)
 
@@ -92,7 +90,6 @@ class MeshVariantRandomiser(Randomiser):
                     continue
                 # only retarget mesh-type visuals
                 if getattr(g, "meshname", None) is None:
-                    print(f"[MeshVariant] Skipping non-mesh geom '{gname}'")
                     continue
 
                 n_targets += 1
@@ -102,8 +99,6 @@ class MeshVariantRandomiser(Randomiser):
 
                 chosen_mesh = id2mesh[inst]
                 if getattr(g, "mesh", None) != chosen_mesh:
-                    print(f"changing {gname} ({inst}) mesh {getattr(g,'mesh',None)} → {chosen_mesh}")
                     g.meshname = chosen_mesh
                     n_changed += 1
 
-        print(f"[MeshVariant] Targets: {n_targets} geoms, Instances: {len(id2mesh)}, Reassigned: {n_changed}")

@@ -20,8 +20,13 @@ def main():
     dir = os.path.dirname(__file__)
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
+    reward_scales = {
+        'r_red': 100.0,
+        'r_alignment': 100.0,
+    }
 
-    env = gym.make("TestEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, height=camera_res, gripper_pause=False)
+    env = gym.make("TestEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
+                   height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
     env = TimeLimit(env, max_episode_steps=250)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
@@ -53,6 +58,7 @@ def main():
                 action = info['intervene_action']
 
             obs, reward, terminated, truncated, info = env.step(action)
+            print(info['blocks_picked'])
             for camera in cameras:
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
                 # Write reward on the frame
