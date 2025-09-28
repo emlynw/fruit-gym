@@ -27,6 +27,12 @@ def main():
 
     env = gym.make("TestEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
                    height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
+    # env = gym.make("PickMultiStrawbEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
+    #                height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
+    # env = gym.make("PickMultiStrawbEnvOld", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
+    #             height=camera_res, gripper_pause=False, include_privileged_obs=True)
+    # env = gym.make("PickStrawbEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
+    #                height=camera_res, gripper_pause=False)
     env = TimeLimit(env, max_episode_steps=250)
     env = SERLObsWrapper(env, proprio_keys=proprio_keys)
     env = RotateImage(env, pixel_key="wrist1")
@@ -58,19 +64,18 @@ def main():
                 action = info['intervene_action']
 
             obs, reward, terminated, truncated, info = env.step(action)
-            print(info['blocks_picked'])
             for camera in cameras:
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
                 # Write reward on the frame
                 cv2.putText(frame, f"Reward: {reward:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"Grasp: {info['r_grasp']:.2f}", (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"Alignment: {info['r_alignment']:.2f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"Distance: {info['r_red']:.2f}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"Gripper Box: {info['r_in_box']:.2f}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"Energy: {info['r_energy']:.2f}", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"Smoothness: {info['r_smooth']:.2f}", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"collision: {info['r_col']:.2f}", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(frame, f"Grasp: {info['r_grasp']:.2f}", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"Grasp: {info['r_grasp']:.2f}", (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"Alignment: {info['r_alignment']:.2f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"Distance: {info['r_red']:.2f}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"Gripper Box: {info['r_in_box']:.2f}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"Energy: {info['r_energy']:.2f}", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"Smoothness: {info['r_smooth']:.2f}", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"collision: {info['r_col']:.2f}", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # cv2.putText(frame, f"Grasp: {info['r_grasp']:.2f}", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.imshow(camera, frame)
                 cv2.waitKey(waitkey)
 

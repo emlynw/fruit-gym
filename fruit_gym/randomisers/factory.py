@@ -23,6 +23,7 @@ from fruit_gym.randomisers import (
     SkyboxRandomiser,
     AssignBerryMaterialsRandomiser,
     EnsureMinRipeBerries,
+    VineColorRandomiser,
     LightingRandomiser,
     PoseRandomiser,
     ScaleRandomiser,
@@ -95,7 +96,7 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
         
         fruit_xmls = s_cfg.get("fruit_xmls")
         if fruit_xmls is None:
-            fruit_xmls = ["strawb_stiff.xml", "strawb_fork.xml", "strawb_fork_double.xml"]
+            fruit_xmls = ["strawb_stiff.xml"]
         fruit_xmls = [Path(xml_dir) / name for name in fruit_xmls]
 
         rand.append(
@@ -110,7 +111,7 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
 
         leaf_xmls = s_cfg.get("leaf_xmls")
         if leaf_xmls is None:
-            leaf_xmls = ["leaves_joints_new.xml"]
+            leaf_xmls = ["leaves.xml"]
         leaf_xmls = [Path(xml_dir) / name for name in leaf_xmls]
         rand.append(
             SpawnerRandomiser(
@@ -216,6 +217,21 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
             AssignBerryMaterialsRandomiser(
                 material_names=["leaf_g1", "leaf_g2", "leaf_s1", "leaf_s2", "leaf_s3"],
                 name_match="leaf"
+            )
+        )
+
+     # ---------------- vine color (tint stems/vines green) -------------------
+    if dr.get("vine_color", {}).get("enabled", False):
+        vc = dr["vine_color"]
+        rand.append(
+            VineColorRandomiser(
+                base_rgba=tuple(vc.get("base_rgba", (0.18, 0.30, 0.12, 1.0))),
+                jitter=tuple(vc.get("jitter", (0.1, 0.1, 0.1))),
+                ensure_green_margin=float(vc.get("ensure_green_margin", 0.02)),
+                alpha=float(vc.get("alpha", 1.0)),
+                prefixes=tuple(vc.get("prefixes", ("seg", "stem"))),
+                regex=vc.get("regex", None),
+                per_instance=bool(vc.get("per_instance", True)),
             )
         )
 

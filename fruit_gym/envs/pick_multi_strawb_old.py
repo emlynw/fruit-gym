@@ -1,17 +1,16 @@
 import numpy as np
 import os
 from pathlib import Path
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union
 import yaml
 import mujoco
 import random
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
-from gymnasium.spaces import Box, Dict as GymDict
+from gymnasium.spaces import Box, Dict
 from scipy.spatial.transform import Rotation
 from fruit_gym.controllers.opspace import opspace
-import gc
 from fruit_gym.envs.randomization import (
     lighting_noise,
     action_scale_noise,
@@ -25,7 +24,7 @@ def load_config(config_path):
     with open(config_path, 'r') as config_file:
         return yaml.safe_load(config_file)
 
-class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
+class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
     r"""
     ## Description
 
@@ -150,12 +149,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         reward_type: str = "dense",
         gripper_pause: bool = False,
         discrete_gripper: bool = True,
-        disappear_delay_steps: int = 16,
         render_mode: str = "rgb_array",
         config_path: Optional[Union[str, Path]] = None,
-        reward_scales: Optional[Dict[str, float]] = None,
-        use_potential_rewards: bool = False,
-        shaping_gamma: float = 0.99,
         **kwargs,
     ):
         utils.EzPickle.__init__(self, image_obs=image_obs, **kwargs)
@@ -176,50 +171,22 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.reward_type = reward_type
         self.gripper_pause = gripper_pause
         self.discrete_gripper = discrete_gripper
-        self.disappear_delay_steps = disappear_delay_steps
-        self._pending_removals = {}   # {strawb_idx: steps_left}
-        self._grasped_pending = set() # indices already credited with r_grasp, awaiting disappearance
 
         self._PANDA_HOME = np.array([0.0, -1.6, 0.0, -2.54, -0.05, 2.49, 0.822], dtype=np.float32)
         self._GRIPPER_HOME = np.array([0.0141, 0.0141], dtype=np.float32)
         self._GRIPPER_MIN = 0
         self._GRIPPER_MAX = 0.004
         self._PANDA_XYZ = np.array([0.1, 0, 0.8], dtype=np.float32)
-        self._CARTESIAN_BOUNDS = np.array([[-0.1, -0.4, 0.6], [0.55, 0.4, 1.1]], dtype=np.float32)
+        self._CARTESIAN_BOUNDS = np.array([[-0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.85])
         self._blocks_picked = 0
-        self.gripper_sleep = 0.2
+        self.gripper_sleep = 0.6
         self.grasp_threshold = 0.333
         MAX_OBSERVABLE_STRAWBERRIES = 8
-        
-        self.use_potential_rewards = use_potential_rewards
-        self.shaping_gamma = shaping_gamma
-        self._prev_phi_red = 0.0
-        self._prev_phi_align = 0.0
-
-        default_reward_scales = {'r_grasp': 8.0, 
-                        'r_red': 4.0, 
-                        'r_alignment': 1.0,
-                        'r_in_box': 1.0,
-                        'r_green_in_box_penalty': 1.0,
-                        'r_col': 1.0, 
-                        'r_dist': 1.0, 
-                        'r_attempt_close': 2.0, 
-                        'r_bad_grasp': 2.0, 
-                        'r_energy': 1.0, 
-                        'r_smooth': 1.0,
-                        'r_gripper': 0.0,
-                        'r_alive': 0.0}
-        
-        if reward_scales is not None:
-            print(f"updating reward scales to : {reward_scales}")
-            default_reward_scales.update(reward_scales)
-
-        self.reward_scales = default_reward_scales
 
         if config_path is None:
-            config_path = Path(__file__).parent.parent / "configs" / "strawb_hanging.yaml"
+            config_path = Path(__file__).parent.parent / "configs" / "strawb_hanging_old.yaml"
         self.cfg = load_config(config_path)
 
         # Define the basic state space components
@@ -294,11 +261,11 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 0, np.inf, shape=(1,), dtype=np.float32
             )
 
-        self.observation_space = GymDict({"state": GymDict(state_space_dict)})
+        self.observation_space = Dict({"state": Dict(state_space_dict)})
         if include_privileged_obs:
-            self.observation_space["priv_state"] = GymDict(priv_state_space_dict)
+            self.observation_space["priv_state"] = Dict(priv_state_space_dict)
         if image_obs:
-            self.observation_space["images"] = GymDict()
+            self.observation_space["images"] = Dict()
             for camera in self.cameras:
                 self.observation_space["images"][camera] = Box(
                     0, 255, shape=(self.height, self.width, 3), dtype=np.uint8
@@ -317,15 +284,18 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             render_mode=self.render_mode,
             width=self.width,
             height=self.height, 
+            camera_id=0, 
             **kwargs,
         )
         self.model.opt.timestep = physics_dt
+        self.camera_id = ()
+        for cam in self.cameras:
+            self.camera_id += (self.model.camera(cam).id,)
         self.action_space = Box(
             np.array([-1.0]*(self.ee_dof+1)), 
             np.array([1.0]*(self.ee_dof+1)),
             dtype=np.float32,
         )
-        # Offscreen viewers per camera
         self._viewers = {
             cam: MujocoRenderer(
                 self.model,
@@ -436,20 +406,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         self.model.geom_conaffinity[:] = self._initial_geom_conaffinity
         self.model.geom_group[:] = self._initial_geom_group # Restore initial groups
 
-        spawn_dist_m = object_cfg.get("spawn_distance_m", 0.2)  # 10 cm by default
-        target_pos = self._point_from_mocap(
-            dist=spawn_dist_m,
-            lateral=object_cfg.get("target_lateral_m", 0.0),
-            vertical=object_cfg.get("target_vertical_m", 0.0),
-            xy_only=True,  # keep it “10 cm at current yaw” on the XY plane
-        )
-        # compensate for vine
-        target_pos[2] += 0.1  # Add some height
+        # Target pos
         target_pos_noise_low = object_cfg.get("target_pos_noise_low", [0.0, 0.0, 0.0])
         target_pos_noise_high = object_cfg.get("target_pos_noise_high", [0.0, 0.0, 0.0])
         target_pos_noise = np.random.uniform(low=target_pos_noise_low, high=target_pos_noise_high, size=3)
-        self.model.body_pos[self.model.body("vine1").id] = target_pos + target_pos_noise
-
+        target_pos = self.data.sensor("pinch_pos").data.copy()
+        target_pos[0] += 0.15
+        target_pos[2] += 0.2
+        self.model.body_pos[self.model.body("vine1").id] = target_pos
         # Target orientation
         random_z_angle = np.random.uniform(low=-np.pi, high=np.pi) # Random angle in radians
         z_rotation = Rotation.from_euler('z', random_z_angle)
@@ -612,14 +576,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
     def domain_randomization(self) -> None:
         dr = self.cfg.get("domain_randomization", {})
-        if dr.get("initial_state", {}).get("enabled", False):
-            initial_state_noise(self)
         if dr.get("objects", {}).get("enabled", False):
             self.object_noise()
         if dr.get("lighting", {}).get("enabled", False):
             lighting_noise(self)
         if dr.get("action_scale", {}).get("enabled", False):
             action_scale_noise(self)
+        if dr.get("initial_state", {}).get("enabled", False):
+            initial_state_noise(self)
         if dr.get("cameras", {}).get("enabled", False):
             camera_noise(self)
         if dr.get("skybox", {}).get("enabled", False):
@@ -647,9 +611,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
     def reset_model(self):
         # Some random resets were getting mujoco Nan warnings that's why the loop
         attempt = 0
-        pos_threshold = 0.1    
-        orient_threshold = 0.2   
-        quat_eps = 1e-12
         while True:
             attempt += 1
             self.reset_arm_and_gripper()
@@ -669,7 +630,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             desired_pos = self.data.mocap_pos[0].copy()
             desired_quat = self.data.mocap_quat[0].copy()
 
-            for _ in range(40*self._n_substeps):
+            for _ in range(10*self._n_substeps):
                 tau = opspace(
                     model=self.model,
                     data=self.data,
@@ -682,45 +643,14 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 )
                 self.data.ctrl[self._panda_ctrl_ids] = tau
                 mujoco.mj_step(self.model, self.data)
-                # Get the current end-effector pose from sensors.
-                current_pos = self.data.sensor("pinch_pos").data.copy()
-                current_quat = self.data.sensor("pinch_quat").data.copy()      
-                nc = np.linalg.norm(current_quat)
-                nd = np.linalg.norm(desired_quat)      
-                if (not np.isfinite(nc)) or (not np.isfinite(nd)) or (nc < quat_eps) or (nd < quat_eps):
-                    orient_diff = float('inf')  # force retry if a quat is degenerate
-                else:
-                    c = current_quat / nc
-                    d = desired_quat / nd
-                    dot = np.dot(c, d)
-                    dot = float(np.clip(abs(dot), -1.0, 1.0))
-                    orient_diff = 2.0 * np.arccos(dot)
-                # Compute the difference in position.
-                pos_diff = np.linalg.norm(current_pos - desired_pos)
-                # Break if Nan, will then continue to next iteration
-                if (np.any(np.isnan(current_pos)) or np.any(np.isnan(current_quat)) or
-                np.any(np.isinf(current_pos)) or np.any(np.isinf(current_quat))):
-                    break
-                # No need to carry on if tolerance ok
-                if pos_diff < pos_threshold and orient_diff < orient_threshold:
-                    break
-
-            # Check that sensor readings are finite.
-            if (np.any(np.isnan(current_pos)) or np.any(np.isnan(current_quat)) or
-                np.any(np.isinf(current_pos)) or np.any(np.isinf(current_quat)) or
-                (pos_diff > pos_threshold or orient_diff > orient_threshold)):
-                print(
-                    f"Reset attempt {attempt+1}: pose error too high "
-                    f"(pos_diff: {pos_diff:.4f}, orient_diff: {orient_diff:.4f}), retrying reset."
-                )
-                if attempt > 100:
-                    raise RuntimeError("Failed to achieve valid reset after multiple attempts")
-                continue
-
+            
             self._block_init = self.data.sensor("block1_pos").data
+            self._x_success = self._block_init[0] - 0.1
+            self._z_success = self._block_init[2] + 0.05
+            self._block_success = self._block_init.copy()
+            self._block_success[0] = self._x_success
+            self._block_success[2] = self._z_success
             self._blocks_picked = 0
-            self._pending_removals = {}
-            self._grasped_pending = set()
 
             for i in self.red_blocks:
                 self.red_positions[i] = self.data.sensor(f"block{i}_pos").data.copy()
@@ -733,21 +663,41 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             self.gripper_state = 0
             self.gripper_blocked = False
 
-            if self.use_potential_rewards:
-                _priv0 = self._compute_privileged_info()
-                self._prev_phi_red = self._phi_red(_priv0)
-                self._prev_phi_align = self._phi_align(_priv0)
+             # Get the current end-effector pose from sensors.
+            current_pos = self.data.sensor("pinch_pos").data.copy()
+            current_quat = self.data.sensor("pinch_quat").data.copy()
 
-            return self._get_obs()
+            # Check that sensor readings are finite.
+            if (np.any(np.isnan(current_pos)) or np.any(np.isnan(current_quat)) or
+                np.any(np.isinf(current_pos)) or np.any(np.isinf(current_quat))):
+                continue
 
+            # Compute the difference in position.
+            pos_diff = np.linalg.norm(current_pos - desired_pos)
+            # Compute orientation difference using the dot-product of unit quaternions.
+            current_quat_norm = current_quat / np.linalg.norm(current_quat)
+            desired_quat_norm = desired_quat / np.linalg.norm(desired_quat)
+            dot = np.abs(np.dot(current_quat_norm, desired_quat_norm))
+            dot = np.clip(dot, -1.0, 1.0)
+            orient_diff = 2 * np.arccos(dot)
+
+            pos_threshold = 0.1    
+            orient_threshold = 0.2    
+
+            if pos_diff < pos_threshold and orient_diff < orient_threshold:
+                return self._get_obs()
+            else:
+                print(
+                    f"Reset attempt {attempt+1}: pose error too high "
+                    f"(pos_diff: {pos_diff:.4f}, orient_diff: {orient_diff:.4f}), retrying reset."
+                )
+                if attempt > 100:
+                    raise RuntimeError("Failed to achieve valid reset after multiple attempts")
 
 
     def step(self, action):
         if np.array(action).shape != self.action_space.shape:
             raise ValueError("Action dimension mismatch")
-
-        if np.isnan(action).any():
-            print(f"nan action passed to env", flush=True)
         action = np.clip(action, self.action_space.low, self.action_space.high)
         # Scale actions (zyx because end effector frame z is along the gripper axis)
         if self.ee_dof == 3:
@@ -760,22 +710,22 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
             z, y, x, roll, pitch, yaw, grasp = action
             drot = np.array([roll, pitch, yaw]) * self.rot_scale
         dpos = np.array([x, y, z]) * self.pos_scale
-        # Calculate position change
+        # Apply position change
         pos = self.data.sensor("pinch_pos").data
         current_quat = np.roll(self.data.sensor("pinch_quat").data, -1)
         current_rotation = Rotation.from_quat(current_quat)
+
         dpos_world = current_rotation.apply(dpos)
         npos = np.clip(pos + dpos_world, *self._CARTESIAN_BOUNDS)
         self.data.mocap_pos[0] = npos
 
         if self.ee_dof > 3:
+            # Convert mujoco wxyz to scipy xyzw
+            current_quat = np.roll(self.data.sensor("pinch_quat").data, -1)
+            current_rotation = Rotation.from_quat(current_quat)
             # Convert the action rotation to a Rotation object
             action_rotation = Rotation.from_euler('xyz', drot)
             # Apply the action rotation
-            q_wxyz = self.data.sensor("pinch_quat").data.copy()
-            if not np.all(np.isfinite(q_wxyz)) or np.linalg.norm(q_wxyz) < 1e-12:
-                print("warning: pinch_quat invalid at t=", self.data.time, "q=", q_wxyz, flush=True)
-
             new_rotation = action_rotation * current_rotation
             # Calculate the new relative rotation
             new_relative_rotation = self.initial_rotation.inv() * new_rotation
@@ -831,10 +781,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
 
         # Reward
         reward, info = self._compute_reward(action)
-
-        # Disappear picked strawberries
-        self._tick_removal_timers()
-
         if self.reward_type == "sparse":
             info['dense_reward'] = reward
             if info['r_grasp'] > 0:
@@ -926,38 +872,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         J = np.vstack((J_v, J_w))
         dx = J @ dq
         return dx.astype(np.float32)
-    
-    def _target_frame_from_mocap(self):
-        """
-        Returns (pos, R) of the target end-effector frame taken from the mocap body.
-        - pos: world position (3,)
-        - R  : world rotation matrix (3x3) mapping local -> world
-        NOTE: self.data.mocap_quat is in wxyz; SciPy expects xyzw.
-        """
-        pos = self.data.mocap_pos[0].copy()
-        q_wxyz = self.data.mocap_quat[0].copy()
-        q_xyzw = np.roll(q_wxyz, -1)
-        R = Rotation.from_quat(q_xyzw).as_matrix()
-        return pos, R
-    
-    def _point_from_mocap(self, dist=0.10, lateral=0.0, vertical=0.0, xy_only=True):
-        """
-        Build a world point offset from the mocap target frame:
-        - dist     : along local +Z (gripper forward)
-        - lateral  : along local +Y (between fingers)
-        - vertical : along local +X (gripper thickness/"up")
-        If xy_only=True, project the forward vector onto XY so pitch/roll don’t lift the fruit.
-        """
-        base, R = self._target_frame_from_mocap()
-        x_axis, y_axis, z_axis = R[:, 0], R[:, 1], R[:, 2]
-
-        fwd = z_axis
-        if xy_only:
-            f = fwd.copy(); f[2] = 0.0
-            n = np.linalg.norm(f)
-            fwd = f if n < 1e-8 else f / n  # safe normalize
-
-        return base + dist * fwd + lateral * y_axis + vertical * x_axis
     
     def _get_strawberry_state_obs(self, tcp_world_pos):
         """
@@ -1061,15 +975,13 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 - grasped_idx: Index of grasped strawberry (if any)
         """
 
-        _MAX_DIST = 1.0
-
         tcp_pos = self.data.sensor("long_pinch_pos").data
         left_pinch_pos = self.data.sensor("left_pinch_pos").data
         right_pinch_pos = self.data.sensor("right_pinch_pos").data
         
         # Initialize return dict
         info = {
-            "min_red_dist": _MAX_DIST,
+            "min_red_dist": float('inf'),
             "radial_dist": 0.0,
             "good_grasp": False,
             "bad_grasp": False,
@@ -1083,7 +995,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         }
         
         # Distance to nearest red strawberry
-        if self.red_blocks:
+        if len(self.red_blocks) > 0:
             dists = {}
             for red_idx in self.red_blocks:
                 stem_pos = self.data.sensor(f"stem{red_idx}_pos").data
@@ -1101,11 +1013,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 vec_to_stem = closest_red_stem_pos - tcp_pos
                 proj_y = np.dot(vec_to_stem, gripper_y_axis)
                 info["radial_dist"] = abs(proj_y)
-        else:
-            info["min_red_dist"] = 0.0
-            info["radial_dist"] = 0.0
-
-        # Check how many RED stems are in the gripper box
+                
+         # Check how many RED stems are in the gripper box
         if hasattr(self, 'red_blocks'):
             for red_idx in self.red_blocks:
                 try:
@@ -1114,8 +1023,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         info["red_stems_in_box_count"] += 1
                 except Exception:
                     pass
-        else:
-            info["red_stems_in_box_count"] = 0
 
         # Check how many GREEN stems are in the gripper box
         green_vine_part_in_box = False
@@ -1179,8 +1086,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                         if stem_idx in self.red_blocks:
                             left_finger_contact_good = True
                             grasped_idx = stem_idx
-                        else:
-                            left_finger_contact_bad = True
                     except ValueError:
                         pass
                 elif other not in allowed_prefixes and other != "right_finger_inner":
@@ -1201,9 +1106,6 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                             else:
                                 # Different stems contacted by different fingers - no good grasp
                                 grasped_idx = None
-                        else:
-                            # If the right finger contacts a green stem, it's a bad grasp
-                            right_finger_contact_bad = True
                     except ValueError:
                         pass
                 elif other not in allowed_prefixes and other != "left_finger_inner":
@@ -1212,6 +1114,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         # Good grasp only if BOTH fingers contact good targets
         good_grasp = left_finger_contact_good and right_finger_contact_good
         bad_grasp = left_finger_contact_bad and right_finger_contact_bad
+        print(f"Good Grasp: {good_grasp}, Bad Grasp: {bad_grasp}, Grasped Index: {grasped_idx}")
         
         info["left_finger_contacts"] = left_contacts
         info["right_finger_contacts"] = right_contacts
@@ -1326,7 +1229,7 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         if not self.image_obs:
             strawberry_state_obs = self._get_strawberry_state_obs(tcp_world_pos)
             obs["state"].update(strawberry_state_obs)
-
+        
         if self.render_mode == "human" and "wrist1" in getattr(self, "_viewers", {}):
             self._viewers["wrist1"].render(self.render_mode)
 
@@ -1347,19 +1250,8 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
          
         
         ## Rewards
-        if self.use_potential_rewards:
-            # Compute current potentials on s' (post-step)
-            phi_red_now = self._phi_red(privileged_info)
-            phi_align_now = self._phi_align(privileged_info)
-
-            # Potential-based shaping r' = gamma*Phi(s') - Phi(s)
-            r_red = self.shaping_gamma * phi_red_now - self._prev_phi_red
-            r_alignment = self.shaping_gamma * phi_align_now - self._prev_phi_align
-        else:
-            # Original dense terms
-            r_red = - np.tanh(20 * min_red_dist) if np.isfinite(min_red_dist) else 0.0
-            r_alignment = - np.tanh(60 * privileged_info["radial_dist"]) if np.isfinite(min_red_dist) else 0.0
-        
+        r_red = - np.tanh(20 * min_red_dist) if min_red_dist != float('inf') else 0.0
+        r_alignment = - np.tanh(60 * privileged_info["radial_dist"]) if min_red_dist != float('inf') else 0.0
         r_in_box = 0.0 if red_stems_in_box_count == 1 and green_stems_in_box_count == 0 else -1.0
 
         
@@ -1369,16 +1261,9 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         r_dist = - np.tanh(5 * privileged_info["total_displacement"])
 
         # Penalize large actions and large changes in actions (reduce shakiness)
-        # r_energy = -np.tanh(0.5*np.linalg.norm(action[:-1]))  # Exclude the grasp action
-        # r_smooth = -np.tanh(0.5*np.linalg.norm(action[:-1] - self.prev_action[:-1]))
-        r_energy = -np.linalg.norm(action[:-1])  # Exclude the grasp action
-        r_smooth = -np.linalg.norm(action[:-1] - self.prev_action[:-1])
+        r_energy = -np.tanh(0.5*np.linalg.norm(action[:-1]))  # Exclude the grasp action
+        r_smooth = -np.tanh(0.5*np.linalg.norm(action[:-1] - self.prev_action[:-1]))
         self.prev_action = action
-
-        if np.array_equal(self.gripper_vec, self.gripper_dict["closing"]) or np.array_equal(self.gripper_vec, self.gripper_dict["opening"]):
-            r_gripper = -1.0
-        else:
-            r_gripper = 0.0
 
         # Reward for attempting to close gripper when very close to a red strawberry
         r_attempt_close = 0.0
@@ -1393,20 +1278,37 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
         grasped_idx = privileged_info.get("grasped_idx", None)
         
         if good_grasp and (not bad_grasp) and grasped_idx is not None:
+            # Look for the red stem index that was contacted.
             curr_pos = self.data.sensor(f"block{grasped_idx}_pos").data
             init_pos = self.red_positions[grasped_idx]
             dist_from_init = np.linalg.norm(curr_pos - init_pos)
-
             if dist_from_init < 0.05:
                 r_grasp = 1.0
-                # Only pay r_grasp once per strawberry
-                if grasped_idx not in self._grasped_pending:
-                    self._blocks_picked += 1
-                    self._grasped_pending.add(grasped_idx)
-                    # Schedule disappearance after N steps; keep visuals/collisions/rewards unchanged until then
-                    self._pending_removals[grasped_idx] = int(getattr(self, "disappear_delay_steps", 8))
+                self._blocks_picked += 1
+                # Make the strawberry invisible by updating its geoms.
+                # We assume its associated bodies are "blockX", "blockX_big", "blockX_small".
+                for suffix in ["", "_big", "_small"]:
+                    body_name = f"block{grasped_idx}{suffix}"
+                    try:
+                        body = self.model.body(body_name)
+                    except Exception:
+                        continue
+                    geom_start = self.model.body_geomadr[body.id]
+                    geom_count = self.model.body_geomnum[body.id]
+                    for i in range(geom_count):
+                        geom_id = geom_start + i
+                        # Set visual group to 3, and disable collision.
+                        self.model.geom_group[geom_id] = 3
+                        self.model.geom_contype[geom_id] = 0
+                        self.model.geom_conaffinity[geom_id] = 0
+
+                # Remove the grasped strawberry from active lists.
+                if grasped_idx in self.active_indices:
+                    self.active_indices = np.delete(self.active_indices, np.where(self.active_indices == grasped_idx))
+                if grasped_idx in self.red_blocks:
+                    self.red_blocks.remove(grasped_idx)        
             else:
-                r_grasp = 0.0
+                r_grasp = 0.0   
 
         # Penalty for being alive
         r_alive = -1.0 
@@ -1428,68 +1330,23 @@ class PickMultiStrawbEnv(MujocoEnv, utils.EzPickle):
                 'r_bad_grasp': r_bad_grasp, 
                 'r_energy': r_energy, 
                 'r_smooth': r_smooth,
-                'r_gripper': r_gripper,
                 'r_alive': r_alive}
-
-        rewards = {k: v * self.reward_scales[k] for k, v in rewards.items()}
+        reward_scales = {'r_grasp': 20.0, 
+                        'r_red': 4.0, 
+                        'r_alignment': 1.0,
+                        'r_in_box': 1.0,
+                        'r_green_in_box_penalty': 1.0,
+                        'r_col': 1.0, 
+                        'r_dist': 1.0, 
+                        'r_attempt_close': 2.0, 
+                        'r_bad_grasp': 5.0, 
+                        'r_energy': 5.0, 
+                        'r_smooth': 5.0,
+                        'r_alive': 0.0}
+        rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
         info = rewards
         info['blocks_picked'] = self._blocks_picked
 
         info['success'] = completed
-
-        if self.use_potential_rewards:
-            self._prev_phi_red = phi_red_now
-            self._prev_phi_align = phi_align_now
         return reward, info
-    
-    def _tick_removal_timers(self):
-        if not self._pending_removals:
-            return
-        # Decrement counters
-        for k in list(self._pending_removals.keys()):
-            self._pending_removals[k] -= 1
-        # Apply any that reached zero
-        due = [k for k, t in self._pending_removals.items() if t <= 0]
-        for idx in due:
-            self._apply_removal(idx)
-            self._pending_removals.pop(idx, None)
-            self._grasped_pending.discard(idx)
-
-    def _apply_removal(self, idx: int):
-        # Hide all geoms for this strawberry (block{idx}, block{idx}_big, block{idx}_small)
-        for suffix in ["", "_big", "_small"]:
-            body_name = f"block{idx}{suffix}"
-            try:
-                body = self.model.body(body_name)
-            except Exception:
-                continue
-            geom_start = self.model.body_geomadr[body.id]
-            geom_count = self.model.body_geomnum[body.id]
-            for k in range(geom_count):
-                geom_id = geom_start + k
-                self.model.geom_group[geom_id] = 3
-                self.model.geom_contype[geom_id] = 0
-                self.model.geom_conaffinity[geom_id] = 0
-
-        # Remove from active lists (matches your current behavior)
-        if hasattr(self, "active_indices") and (idx in self.active_indices):
-            self.active_indices = np.delete(self.active_indices, np.where(self.active_indices == idx))
-        if hasattr(self, "red_blocks") and (idx in self.red_blocks):
-            self.red_blocks.remove(idx)
-
-    def _phi_red(self, priv) -> float:
-        """State-only potential: high near the target red stem."""
-        d = priv["min_red_dist"]
-        if not np.isfinite(d):
-            return 0.0
-        # Smooth, monotone, bounded in (0, 1]
-        return float(-d)
-
-    def _phi_align(self, priv) -> float:
-        """State-only potential: high when gripper is well aligned (small radial_dist)."""
-        # If no red exists, keep potential neutral
-        if not np.isfinite(priv["min_red_dist"]):
-            return 0.0
-        r = priv["radial_dist"]
-        return float(-r)

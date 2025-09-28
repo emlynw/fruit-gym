@@ -16,15 +16,13 @@ domain_randomization:
 
   action_scale:
     enabled: true
-    pos_scale_range: [0.008, 0.012] # [0.005, 0.006] seems good, bit slow
+    pos_scale_range: [0.008, 0.012]
     rot_scale_range: [0.18, 0.3]
 
   initial_state:
     enabled: true
-    ee_noise_low: [-0.3, -0.3, -0.2]
-    ee_noise_high: [0.3, 0.3, 0.3]
-    ee_rot_noise_low: [-0.3, -0.3, -0.3]
-    ee_rot_noise_high: [0.3, 0.3, 0.3]
+    ee_noise_low: [-0.04, -0.05, 0.0]
+    ee_noise_high: [0.04, 0.05, 0.1]
 
   cameras:
     enabled: true
@@ -56,7 +54,7 @@ domain_randomization:
     num_green: 7
     random_count: True
     random_size: True
-    target_pos_noise_low: [0.0, -0.03, -0.02]
-    target_pos_noise_high: [0.04, 0.03, 0.05]
-    distract_pos_noise_low: [-0.06, -0.03, -0.02]
+    target_pos_noise_low: [-0.02, -0.1, -0.1]
+    target_pos_noise_high: [0.08, 0.1, 0.08]
+    distract_pos_noise_low: [-0.06, -0.03, -0.05]
     distract_pos_noise_high: [0.03, 0.03, 0.05]

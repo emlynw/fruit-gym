@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 import mujoco
 import numpy as np
-from typing import Optional
+from typing import Optional, Iterable
 
 SKYBOX_EXTS: set[str] = {".png", ".jpg", ".jpeg"}
 
@@ -276,3 +276,111 @@ class EnsureMinRipeBerries(Randomiser):
                 model.geom_matid[gid] = chosen_mat
                 changed += 1
 
+
+class VineColorRandomiser(Randomiser):
+    """
+    Randomize RGBA for vine / stem geoms while keeping them green.
+
+    Configuration (in YAML):
+      domain_randomization:
+        vine_color:
+          enabled: true
+          # Optional: override defaults
+          base_rgba: [0.18, 0.30, 0.12, 1.0]
+          jitter: [0.05, 0.06, 0.05]        # per-channel +/- jitter for R,G,B
+          ensure_green_margin: 0.02         # make sure G >= max(R,B) + margin
+          alpha: 1.0                        # overwrite alpha
+          prefixes: ["seg", "stem"]         # geom-name prefixes to match
+          regex: ""                         # alternatively, a regex to match names
+          per_instance: true                # keep a consistent shade per vine instance
+    """
+
+    affects_spec = False
+    needs_ctx = False
+
+    def __init__(
+        self,
+        *,
+        base_rgba: Iterable[float] = (0.18, 0.30, 0.12, 1.0),
+        jitter: Iterable[float] = (0.05, 0.06, 0.05),
+        ensure_green_margin: float = 0.02,
+        alpha: float = 1.0,
+        prefixes: Iterable[str] = ("seg", "stem"),
+        regex: str | None = None,
+        per_instance: bool = True,
+    ):
+        self.base = np.array(base_rgba, dtype=float)
+        self.jitter = np.array(jitter, dtype=float)
+        self.ensure_green_margin = float(ensure_green_margin)
+        self.alpha = float(alpha)
+        self.prefixes = tuple(prefixes)
+        self.rx = re.compile(regex) if regex else None
+        self.per_instance = bool(per_instance)
+
+    # -------- helpers --------
+    @staticmethod
+    def _instance_key(name: str) -> Optional[str]:
+        """
+        Extract a stable id from names like:
+          seg1_3  -> '3'
+          stem_2  -> '2'
+          aG3_5   -> '5'
+        Uses the last numeric token.
+        """
+        if not name:
+            return None
+        parts = name.split("_")
+        if parts and parts[-1].isdigit():
+            return parts[-1]
+        # also handle names like aG3_5 where '3' isn't the instance but trailing is
+        # already covered; if nothing numeric at end, give up
+        return None
+
+    def _is_target(self, name: str) -> bool:
+        if not name:
+            return False
+        if self.rx and self.rx.search(name):
+            return True
+        return name.startswith(self.prefixes)
+
+    def _sample_green(self, rng: np.random.Generator) -> np.ndarray:
+        rgb = self.base[:3] + rng.uniform(-self.jitter, +self.jitter)
+        rgb = np.clip(rgb, 0.0, 1.0)
+        # enforce "greenish": G >= max(R,B) + margin
+        g = rgb[1]
+        rb_max = max(rgb[0], rgb[2])
+        if g < rb_max + self.ensure_green_margin:
+            # push G up slightly (but cap to 1.0)
+            g = min(1.0, rb_max + self.ensure_green_margin)
+            rgb[1] = g
+        return np.array([rgb[0], rgb[1], rgb[2], self.alpha], dtype=np.float32)
+
+    # -------- main --------
+    def apply(self, *, spec, model, data, rng, ctx=None):
+        if model is None:
+            return  # model/data-level pass only
+
+        # Optional: keep one shade per instance id so a vine segment set matches
+        id2rgba: dict[str, np.ndarray] = {}
+
+        n_changed = 0
+        for gid in range(int(model.ngeom)):
+            name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gid) or ""
+            if not self._is_target(name):
+                continue
+
+            if self.per_instance:
+                key = self._instance_key(name)
+                if key is None:
+                    # fall back to per-geom sampling
+                    rgba = self._sample_green(rng)
+                else:
+                    rgba = id2rgba.get(key)
+                    if rgba is None:
+                        rgba = self._sample_green(rng)
+                        id2rgba[key] = rgba
+            else:
+                rgba = self._sample_green(rng)
+
+            model.geom_rgba[gid] = rgba
+            n_changed += 1

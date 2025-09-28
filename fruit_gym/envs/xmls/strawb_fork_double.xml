@@ -6,12 +6,11 @@
       <joint type="ball" stiffness="0.02" armature="0.0001" damping="0.01" actuatorfrclimited="false"/>
       <geom  type="capsule" size="0.0007" mass="0.0001"
              solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"
-             rgba="0.208 0.337 0.149 1"/>
+             rgba="0.18 0.3 0.12 1"/>
     </default>
   </default>
 
   <worldbody>
-    <!-- root at origin; rotate/place when attaching in the parent scene -->
     <body name="vine_root" pos="0.45 -0.03 0.9" euler="0 2.64 0">
 
       <!-- main chain -->
