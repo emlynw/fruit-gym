@@ -18,6 +18,9 @@ Fruit Gym is a collection of Gymnasium environments for robotic manipulation tas
 
 The action and observation spaces, as well as reward components, are similar to **PickStrawbEnv** but are adapted to handle multiple targets.
 
+### PickMultiStrawbHardEnv
+**PickMultiStrawbEnv** like PickMultiStrawbEnv but with leaves + more fruit meshes, sizes, and textures
+
 ## Installation
 
 To install Fruit Gym, clone the repository and install it in editable mode:
@@ -42,6 +45,14 @@ This repository builds upon the work of [serl](https://github.com/rail-berkeley/
 
 If you find Fruit Gym useful in your research, please consider citing it as follows:
 
-To do
+@inproceedings{williams2025zero,
+  author    = {Emlyn Williams and Athanasios Polydoros},
+  title     = {Zero-Shot Sim-to-Real Reinforcement Learning for Fruit Harvesting},
+  booktitle = {Proceedings of the IEEE International Conference on Automation Science and Engineering (CASE)},
+  year      = {2025},
+  organization = {IEEE},
+  note      = {Also available as arXiv:2505.08458}
+}
+
 
 

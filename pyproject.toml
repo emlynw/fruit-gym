@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fruit-gym"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Gymnasium environment for fruit picking tasks."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -13,8 +13,8 @@ authors = [{name = "Your Name", email = "your.email@example.com"}]
 
 dependencies = [
   "numpy",
-  "gymnasium == 0.29.1",
-  "mujoco >= 3.0",
+  "gymnasium >= 1.2.0",
+  "mujoco >= 3.3.4",
   "pyyaml",
 ]
 
