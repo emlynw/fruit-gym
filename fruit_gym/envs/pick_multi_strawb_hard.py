@@ -50,7 +50,7 @@ def load_config(config_path: Union[str, Path]):
 # Environment
 # ---------------------------
 
-class TestEnv(MujocoEnv, utils.EzPickle):
+class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
     r"""Clean refactor of the TestEnv using shared helpers for control, obs, and indexing."""
 
     metadata = {"render_modes": ["human", "rgb_array", "depth_array"]}

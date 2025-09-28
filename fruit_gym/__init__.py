@@ -4,4 +4,4 @@ register(id="PickStrawbEnv-v1", entry_point="fruit_gym.envs:PickStrawbEnv" , max
 register(id="PickMultiStrawbEnv-v1", entry_point="fruit_gym.envs:PickMultiStrawbEnv" , max_episode_steps=1000)
 register(id="PickMultiStrawbEnvOld-v1", entry_point="fruit_gym.envs:PickMultiStrawbEnvOld" , max_episode_steps=1000)
 register(id="PickMultiStrawbPhysicsEnv-v1", entry_point="fruit_gym.envs:PickMultiStrawbPhysicsEnv" , max_episode_steps=1000)
-register(id="TestEnv-v1", entry_point="fruit_gym.envs:TestEnv", max_episode_steps=1000)
+register(id="PickMultiStrawbHardEnv-v1", entry_point="fruit_gym.envs:PickMultiStrawbHardEnv" , max_episode_steps=1000)

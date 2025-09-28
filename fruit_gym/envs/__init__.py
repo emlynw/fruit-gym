@@ -2,4 +2,4 @@ from fruit_gym.envs.pick_strawb import PickStrawbEnv
 from fruit_gym.envs.pick_multi_strawb import PickMultiStrawbEnv
 from fruit_gym.envs.pick_multi_strawb_old import PickMultiStrawbEnvOld
 from fruit_gym.envs.pick_multi_strawb_physics import PickMultiStrawbPhysicsEnv
-from fruit_gym.envs.test_env import TestEnv
+from fruit_gym.envs.pick_multi_strawb_hard import PickMultiStrawbHardEnv
