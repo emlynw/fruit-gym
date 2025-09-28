@@ -61,7 +61,7 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         randomize_domain: bool = True,
         ee_dof: int = 6,  # 3 for position, 3 for orientation
         control_dt: float = 0.05,
-        physics_dt: float = 0.002,
+        physics_dt: float = 0.001,
         width: int = 480,
         height: int = 480,
         pos_scale: float = 0.008,
