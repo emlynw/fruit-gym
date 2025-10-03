@@ -1114,7 +1114,6 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         # Good grasp only if BOTH fingers contact good targets
         good_grasp = left_finger_contact_good and right_finger_contact_good
         bad_grasp = left_finger_contact_bad and right_finger_contact_bad
-        print(f"Good Grasp: {good_grasp}, Bad Grasp: {bad_grasp}, Grasped Index: {grasped_idx}")
         
         info["left_finger_contacts"] = left_contacts
         info["right_finger_contacts"] = right_contacts
