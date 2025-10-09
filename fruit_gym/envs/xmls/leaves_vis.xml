@@ -1,0 +1,81 @@
+<mujoco model="strawb_vine">
+  <compiler angle="radian" meshdir="assets"/>
+
+  <asset>
+
+    <mesh name="leaf" file="leaf_1.obj" scale="0.4 0.4 0.4"/>
+    <texture name="leaf_g1"   type="2d" file="textures/leaf_g1.png"/>
+    <texture name="leaf_g2"   type="2d" file="textures/leaf_g2.png"/>
+    <texture name="leaf_s1"   type="2d" file="textures/leaf_s1.png"/>
+    <texture name="leaf_s2"   type="2d" file="textures/leaf_s2.png"/>
+    <texture name="leaf_s3"   type="2d" file="textures/leaf_s3.png"/>
+    <material name="leaf" texture="leaf_g1"/>
+  </asset>
+
+  <default>
+    <default class="vine">
+      <joint type="ball" stiffness="0.02" armature="0.0001" damping="0.01" actuatorfrclimited="false"/>
+      <geom  type="capsule" size="0.0007" mass="0.0001"
+             solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"
+             rgba="0.208 0.337 0.149 1"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <!-- root at origin; rotate/place when attaching in the parent scene -->
+    <body name="vine_root" pos="0.45 -0.03 0.9" euler="0 2.64 0">
+      <joint class="vine" name="J_0"/>
+
+      <!-- straight vine of 4 capsules -->
+      <body name="seg_first">
+        <geom class="vine" name="seg0" fromto="0 0 0  0.03 0 0"/>
+        <site name="seg_first" pos="0 0 0" group="3"/>
+        <body name="seg_1" pos="0.03 0 0">
+          <joint class="vine" name="j1"/>
+          <site name="joint_1" pos="0 0 0" rgba = "0 0 1 1" size="0.002"/>
+          <geom  class="vine" name="seg1" fromto="0 0 0  0.03 0 0"/>
+          <body name="seg_2" pos="0.03 0 0">
+            <joint class="vine" name="j2"/>
+            <site name="joint_2" pos="0 0 0" rgba = "0 0 1 1" size="0.002"/>
+            <geom  class="vine" name="seg2" fromto="0 0 0  0.03 0 0"/>
+            <body name="seg_last" pos="0.03 0 0">
+              <joint class="vine" name="j_last"/>
+              <site name="joint_last" pos="0 0 0" rgba = "0 0 1 1" size="0.002"/>
+              <geom  class="vine" name="seg3" fromto="0 0 0  0.03 0 0"/>
+              <site  name="seg_last" pos="0.03 0 0" group="3"/>
+              <!-- petiole (capsule) and hub with 3 leaves -->
+              <body name="petiole" pos="0.03 0 0">
+                <joint class="vine" name="j_petiole" stiffness="0.01" damping="0.0005" armature="0.0001"/>
+                <site name="petiole_joint_site" pos="0 0 0" rgba = "0 0 1 1" size="0.002"/>
+                <geom class="vine" name="petiole_caps" fromto="0 0 0  0.024 0 0"/>
+                <site name="petiole_site" pos="0.024 0 0" size="0.0012" rgba="0 0 1 1" group="3"/>
+                <body name="hub" pos="0.024 0 0" euler="0 0 1.57">
+                  <!-- Leaf A (+X) -->
+                  <body name="leafA_body" pos="0.00 0 0">
+                    <joint name="leafA_joint" type="ball" damping="0.0005" armature="0.0001" stiffness="0.01"/>
+                    <site name="leafA_site" pos="0 0 0" rgba = "0 0 1 1" size="0.002"/>
+                    <geom  name="leaf_A" type="mesh" mesh="leaf" material="leaf" mass="0.002" rgba="0.208 0.337 0.149 1"/>
+                  </body>
+                  <!-- Leaf B (+Y), roll 180°, yaw +90° -->
+                  <body name="leafB_body" pos="0 0.00 0" euler="3.1415926 0 1.5707963">
+                    <joint name="leafB_joint" type="ball" damping="0.0005" armature="0.0001" stiffness="0.01"/>
+                    <site name="leafB_site" pos="0 0 0" rgba = "0 0 1 1" size="0.002"/>
+                    <geom  name="leaf_B" type="mesh" mesh="leaf" material="leaf" mass="0.002" rgba="0.208 0.337 0.149 1"/>
+                  </body>
+                  <!-- Leaf C (−X), yaw 180° -->
+                  <body name="leafC_body" pos="-0.00 0 0" euler="0 0 3.1415926">
+                    <joint name="leafC_joint" type="ball" damping="0.0005" armature="0.0001" stiffness="0.01"/>
+                    <site name="leafC_site" pos="0 0 0" rgba = "0 0 1 1" size="0.002"/>
+                    <geom  name="leaf_C" type="mesh" mesh="leaf" material="leaf" mass="0.002" rgba="0.208 0.337 0.149 1"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <!-- end chain -->
+
+    </body>
+  </worldbody>
+</mujoco>

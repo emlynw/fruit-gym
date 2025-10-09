@@ -73,6 +73,10 @@
     <mesh name="leaf_3" file="leaf_3.obj" scale="1 1 1"/>
     <mesh name="leaf_4" file="leaf_4.obj" scale="1 1 1"/>
     <mesh name="leaf_5" file="leaf_5.obj" scale="1 1 1"/>
+
+    <model name="strawb" file="strawb_stiff.xml"/>
+    <model name="strawb_fork" file="strawb_fork.xml"/>
+    <model name="strawb_fork_double" file="strawb_fork_double.xml"/>
   </asset>
 
   <worldbody>
@@ -80,12 +84,26 @@
     <body name="light0" pos="0.3 0 1.6">
       <light pos="0 0 0" dir="0 0 -1" ambient="0.1 0.1 0.1" diffuse="0.2 0.2 0.2"/>
     </body>
-    <body name="front" pos="0.8 0.7 0.7" xyaxes="-0.811 0.585 -0.000 -0.007 -0.010 1.000">
+    <body name="front" pos="1.040 1.211 0.499" xyaxes="-0.811 0.585 -0.000 -0.007 -0.010 1.000">
       <camera name="front" pos="0 0 0" fovy="41"/>
     </body>
 
     <body name="target" pos="0.15 0 0.5" quat="1 0 0 0" mocap="true">
       <geom name="target" size="0.03 0.03 0.03" type="box" contype="0" conaffinity="0" rgba="0.6 0.3 0.3 0"/>
+    </body>
+
+    <body name="vine0_anchor" pos="0.45 -0.03 0.90" euler="0 2.64 0">
+      <attach model="strawb" prefix="v0_"/>
+    </body>
+
+    <!-- Instance 1 -->
+    <body name="vine1_anchor" pos="0.55  0.10 0.92" euler="0 2.50 0">
+      <attach model="strawb" prefix="v1_"/>
+    </body>
+
+    <!-- Instance 2 -->
+    <body name="vine2_anchor" pos="0.35 -0.12 0.88" euler="0 2.70 0">
+      <attach model="strawb" prefix="v2_"/>
     </body>
   </worldbody>
 

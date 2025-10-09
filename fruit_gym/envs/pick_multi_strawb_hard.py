@@ -281,8 +281,9 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
             viewer = self.mujoco_renderer._get_viewer("rgb_array")
             ctx = viewer.con
             for r in self._randomisers:
+                print(f"applying randomiser: {r.__class__.__name__}")
                 if r.affects_spec:
-                    r.apply(spec=self._mj_spec, model=None, data=None, rng=self.np_random, ctx=ctx)
+                    r.apply(spec=self._mj_spec, model=None, data=None, rng=np.random.default_rng(0), ctx=ctx)
 
             # Recompile and fresh data
             self.model = self._mj_spec.compile()
@@ -292,8 +293,9 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
 
             # Randomisers that affect compiled model/data
             for r in self._randomisers:
+                print(f"applying randomiser: {r.__class__.__name__}")
                 if not r.affects_spec:
-                    r.apply(spec=None, model=self.model, data=self.data, rng=self.np_random, ctx=ctx)
+                    r.apply(spec=None, model=self.model, data=self.data, rng=np.random.default_rng(0), ctx=ctx)
 
             # Rebuild viewers for new model
             self._viewers = {
