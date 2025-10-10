@@ -64,8 +64,8 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         physics_dt: float = 0.001,
         width: int = 480,
         height: int = 480,
-        pos_scale: float = 0.008,
-        rot_scale: float = 0.5,
+        pos_scale: float = 0.0045,
+        rot_scale: float = 0.065,
         cameras: Optional[List[str]] = None,
         reward_type: str = "dense",
         reward_scales: Optional[dict] = None,
@@ -220,7 +220,7 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         self._panda_dof_ids = np.array([self.model.joint(f"joint{i}").id for i in range(1, 8)])
         self._panda_ctrl_ids = np.array([self.model.actuator(f"actuator{i}").id for i in range(1, 8)])
         self._gripper_ctrl_id = self.model.actuator("fingers_actuator").id
-        self._pinch_site_id = self.model.site("pinch").id
+        self._pinch_site_id = self.model.site("long_pinch").id
 
     def _init_state(self) -> None:
         # Gripper UI vector
@@ -244,7 +244,7 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         self.init_light_pos = self.model.body_pos[self.model.body("light0").id].copy()
 
         # Reference EE orientation (kept for rotation clipping)
-        self.initial_position = np.array([0.1, 0.0, 0.75], dtype=np.float32)
+        self.initial_position = PANDA_XYZ
         self.initial_orientation = np.array([0.725, 0.0, 0.688, 0.0], dtype=np.float32)
         self.initial_rotation = Rotation.from_quat(self.initial_orientation)
 
@@ -318,8 +318,9 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
             desired_pos = self.data.mocap_pos[0].copy()
             desired_quat = self.data.mocap_quat[0].copy()
 
+            self.prev_tau_des = np.zeros(len(self._panda_dof_ids), dtype=np.float64)
             # Let opspace settle for a bit
-            for _ in range(10 * self._n_substeps):
+            for _ in range(50 * self._n_substeps):
                 tau = opspace(
                     model=self.model,
                     data=self.data,
@@ -329,7 +330,9 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
                     ori=self.data.mocap_quat[0],
                     joint=self._PANDA_HOME,
                     gravity_comp=True,
+                    prev_tau_des=self.prev_tau_des,
                 )
+                self.prev_tau_des = tau.copy() 
                 self.data.ctrl[self._panda_ctrl_ids] = tau
                 mujoco.mj_step(self.model, self.data)
 
@@ -341,8 +344,8 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
             self.gripper_blocked = False
 
             # Validate pose
-            current_pos = self.data.sensor("pinch_pos").data.copy()
-            current_quat = self.data.sensor("pinch_quat").data.copy()
+            current_pos = self.data.sensor("long_pinch_pos").data.copy()
+            current_quat = self.data.sensor("long_pinch_quat").data.copy()
             if (
                 np.any(np.isnan(current_pos))
                 or np.any(np.isnan(current_quat))
@@ -425,22 +428,25 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
 
         # Position update in world via current EE orientation
         dpos_local = np.array([x, y, z], dtype=np.float32) * self.pos_scale
-        current_quat_xyzw = np.roll(self.data.sensor("pinch_quat").data, -1)
-        current_rot = Rotation.from_quat(current_quat_xyzw)
-        dpos_world = current_rot.apply(dpos_local)
-        npos = np.clip(self.data.sensor("pinch_pos").data + dpos_world, *self._CARTESIAN_BOUNDS)
-        self.data.mocap_pos[0] = npos
-
-        # Orientation update (relative to initial orientation, with bounds)
-        if drot is not None:
+        pos_eps = 1e-4
+        rot_eps = 1e-3
+        if np.linalg.norm(dpos_local) > pos_eps or np.linalg.norm(drot) > rot_eps:
+            current_quat_xyzw = np.roll(self.data.sensor("long_pinch_quat").data, -1)
             current_rot = Rotation.from_quat(current_quat_xyzw)
-            action_rot = Rotation.from_euler("xyz", drot)
-            new_rot = action_rot * current_rot
-            rel_rot = self.initial_rotation.inv() * new_rot
-            rel_euler = rel_rot.as_euler("xyz")
-            clipped = np.clip(rel_euler, self._ROTATION_BOUNDS[0], self._ROTATION_BOUNDS[1])
-            final_rot = self.initial_rotation * Rotation.from_euler("xyz", clipped)
-            self.data.mocap_quat[0] = np.roll(final_rot.as_quat(), 1)  # xyzw -> wxyz
+            dpos_world = current_rot.apply(dpos_local)
+            npos = np.clip(self.data.sensor("long_pinch_pos").data + dpos_world, *self._CARTESIAN_BOUNDS)
+            self.data.mocap_pos[0] = npos
+
+            # Orientation update (relative to initial orientation, with bounds)
+            if drot is not None:
+                current_rot = Rotation.from_quat(current_quat_xyzw)
+                action_rot = Rotation.from_euler("xyz", drot)
+                new_rot = action_rot * current_rot
+                rel_rot = self.initial_rotation.inv() * new_rot
+                rel_euler = rel_rot.as_euler("xyz")
+                clipped = np.clip(rel_euler, self._ROTATION_BOUNDS[0], self._ROTATION_BOUNDS[1])
+                final_rot = self.initial_rotation * Rotation.from_euler("xyz", clipped)
+                self.data.mocap_quat[0] = np.roll(final_rot.as_quat(), 1)  # xyzw -> wxyz
 
         # Gripper control via helper
         moving_gripper, target_t = handle_gripper_control(self, action)
@@ -449,7 +455,7 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         if self.discrete_gripper and self.gripper_pause and moving_gripper:
             run_opspace_for_duration(self, until_time=target_t)
         else:
-            run_opspace_substeps(self, n_substeps=self._n_substeps, warmup_ratio=0.2)
+            run_opspace_substeps(self, n_substeps=self._n_substeps, warmup_ratio=0.3)
 
         if self.include_privileged_obs:
             self.current_privileged_info = get_privileged_info(self)
@@ -488,6 +494,6 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         self.data.ctrl[self._gripper_ctrl_id] = self._GRIPPER_MAX
         self.gripper_vec = self.gripper_dict["open"]
         mujoco.mj_forward(self.model, self.data)
-        self.data.mocap_pos[0] = self.data.sensor("pinch_pos").data.copy()
-        self.data.mocap_quat[0] = self.data.sensor("pinch_quat").data.copy()
+        self.data.mocap_pos[0] = self.data.sensor("long_pinch_pos").data.copy()
+        self.data.mocap_quat[0] = self.data.sensor("long_pinch_quat").data.copy()
         mujoco.mj_step(self.model, self.data)

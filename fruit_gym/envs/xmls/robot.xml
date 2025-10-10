@@ -260,7 +260,7 @@
                         <body name="pinch" pos="0 0 0.105">
                           <site name="pinch" pos="0 0 0" size="0.01" group="3" rgba="1 0 0 1"/>
                         </body>
-                        <body name="long_pinch" pos="0 0 0.142">
+                        <body name="long_pinch" pos="0 0 0.255">
                           <site name="long_pinch" pos="0 0 0" size="0.001" group="3" rgba="1 0 0 1"/>
                         </body>
                         <body name="left_finger" pos="0 0 0.0584">

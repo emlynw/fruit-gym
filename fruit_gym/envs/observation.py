@@ -35,8 +35,8 @@ def get_obs(env) -> TDict[str, Any]:
     obs: TDict[str, Any] = {"state": {}}
 
     # --- TCP pose ---
-    tcp_world_pos = env.data.sensor("pinch_pos").data.copy()
-    tcp_world_quat_xyzw = np.roll(env.data.sensor("pinch_quat").data, -1).copy()  # mujoco wxyz -> xyzw
+    tcp_world_pos = env.data.sensor("long_pinch_pos").data.copy()
+    tcp_world_quat_xyzw = np.roll(env.data.sensor("long_pinch_quat").data, -1).copy()  # mujoco wxyz -> xyzw
 
     if getattr(env, "randomize_domain", False):
         # position noise

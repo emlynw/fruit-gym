@@ -84,8 +84,10 @@ def run_opspace_for_duration(env, until_time: float) -> None:
             ori=env.data.mocap_quat[0],
             joint=env._PANDA_HOME,
             gravity_comp=True,
+            prev_tau_des=env.prev_tau_des,
         )
         env.data.ctrl[env._panda_ctrl_ids] = tau
+        env.prev_tau_des = tau.copy()
         mujoco.mj_step(env.model, env.data)
 
 
@@ -108,6 +110,8 @@ def run_opspace_substeps(env, n_substeps: int, warmup_ratio: float = 0.0) -> Non
                 ori=env.data.mocap_quat[0],
                 joint=env._PANDA_HOME,
                 gravity_comp=True,
+                prev_tau_des=env.prev_tau_des,
             )
             env.data.ctrl[env._panda_ctrl_ids] = tau
+            env.prev_tau_des = tau.copy()
             mujoco.mj_step(env.model, env.data)
