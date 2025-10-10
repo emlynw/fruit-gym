@@ -51,8 +51,10 @@
     <mesh name="link7_c" file="link7.stl"/>
     <mesh name="camera_mount_c" file="camera_mount_collision_straight.stl"/>
     <mesh name="hand_c" file="hand.stl"/>
-    <mesh name="gripper_long_inner" file="gripper_long_inner_new.stl"/>
-    <mesh name="gripper_long_outer" file="gripper_long_outer_new.stl"/>
+    <mesh name="gripper_long_outer_male" file="gripper_longest_outer_male.stl"/>
+    <mesh name="gripper_long_outer_female" file="gripper_longest_outer_female.stl"/>
+    <mesh name="gripper_long_inner_male" file="gripper_longest_inner_male.stl"/>
+    <mesh name="gripper_long_inner_female" file="gripper_longest_inner_female.stl"/>
     <mesh name="gripper_long" file="gripper_long.stl"/>
     <mesh name="link0_0" file="link0_0.obj"/>
     <mesh name="link0_1" file="link0_1.obj"/>
@@ -268,20 +270,20 @@
                           <joint name="finger_joint1" class="finger" pos="0 0 0" axis="0 1 0"/>
                           <geom class="visual" material="off_white" mesh="finger_0"/>
                           <geom class="collision" mesh="finger_0"/>
-                          <geom name="left_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
-                          <geom name="left_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
-                          <geom class="visual" material="black" mesh="gripper_long"/>
-                          <site name="left_pinch" pos="0 0 0.0835" size="0.001" group="3" rgba="1 0 0 1"/>
+                          <geom name="left_finger_outer" pos="0.0 -0.0026 0" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer_male" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
+                          <geom name="left_finger_inner" pos="0.0 -0.0026 0" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner_male" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
+                          <geom class="visual" pos="0.0 -0.0026 0" material="black" mesh="gripper_long_outer_male"/>
+                          <site name="left_pinch" pos="0 0 0.132" size="0.003" group="3" rgba="1 0 0 1"/>
                         </body>
                         <body name="right_finger" pos="0 0 0.0584" quat="0 0 0 1">
                           <inertial pos="0 0 0" mass="0.015" diaginertia="2.375e-06 2.375e-06 7.5e-07"/>
                           <joint name="finger_joint2" class="finger" pos="0 0 0" axis="0 1 0"/>
                           <geom class="visual" material="off_white" mesh="finger_0"/>
                           <geom class="collision" mesh="finger_0"/>
-                          <geom name="right_finger_outer" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
-                          <geom name="right_finger_inner" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" group="4"/>
-                          <geom class="visual" material="black" mesh="gripper_long"/>
-                          <site name="right_pinch" pos="0 0 0.0835" size="0.001" group="3" rgba="1 0 0 1"/>
+                          <geom name="right_finger_outer" pos="0.0 -0.0026 0" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_outer_female" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2"/>
+                          <geom name="right_finger_inner" pos="0.0 -0.0026 0" class="collision" friction="2.0 0.1 0.05" mesh="gripper_long_inner_female" solref="0.001 1" solimp="0.97 0.995 0.0005 0.5 2" group="4"/>
+                          <geom class="visual" pos="0.0 -0.0026 0" material="black" mesh="gripper_long_outer_female"/>
+                          <site name="right_pinch" pos="0 0 0.132" size="0.003" group="3" rgba="1 0 0 1"/>
                           <!-- <site name="finger_top"         pos="0.009 0. 0.0835" size="0.002" group="3" rgba="1 0 0 1"/>
                           <site name="finger_bottom"      pos="-0.009 0 0.0835" size="0.002" group="3" rgba="1 0 0 1"/>
                           <site name="finger_front"       pos="0 0 0.105" size="0.002" group="3" rgba="1 0 0 1"/>
