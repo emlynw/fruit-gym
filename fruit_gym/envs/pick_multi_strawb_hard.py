@@ -116,7 +116,8 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         )
         self._pending_removals = {}
         self._grasped_pending = set()
-        self._blocks_picked = 0
+        self._ripe_fruits_picked = 0
+        self._unripe_fruits_picked = 0
         self._prev_phi_red = 0.0
         self._prev_phi_align = 0.0
 
@@ -399,7 +400,8 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
                 # Reset disappearance & potential-shaping bookkeeping
                 self._pending_removals = {}
                 self._grasped_pending = set()
-                self._blocks_picked = 0
+                self._ripe_fruits_picked = 0
+                self._unripe_fruits_picked = 0
                 self._prev_phi_red = 0.0
                 self._prev_phi_align = 0.0
 

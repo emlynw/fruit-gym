@@ -43,13 +43,13 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
 
     | Num | Action Component   | Description                                                                                                   | Range   |
     |-----|--------------------|---------------------------------------------------------------------------------------------------------------|---------|
-    | 0   | dz                 | Displacement along the z-axis (vertical movement)                                                             | [-1, 1] |
-    | 1   | dy                 | Displacement along the y-axis                                                                                 | [-1, 1] |
-    | 2   | dx                 | Displacement along the x-axis                                                                                 | [-1, 1] |
-    | 3   | droll              | Rotation about the x-axis (roll)                                                                              | [-1, 1] |
-    | 4   | dpitch             | Rotation about the y-axis (pitch)                                                                             | [-1, 1] |
-    | 5   | dyaw               | Rotation about the z-axis (yaw)                                                                               | [-1, 1] |
-    | 6   | dgrasp             | Grasp command. Values above a threshold indicate an attempt to grasp; below indicate release.                   | [-1, 1] |
+    | 0   | dz                  | Displacement along the z-axis (vertical movement)                                                             | [-1, 1] |
+    | 1   | dy                  | Displacement along the y-axis                                                                                 | [-1, 1] |
+    | 2   | dx                  | Displacement along the x-axis                                                                                 | [-1, 1] |
+    | 3   | droll               | Rotation about the x-axis (roll)                                                                              | [-1, 1] |
+    | 4   | dpitch              | Rotation about the y-axis (pitch)                                                                             | [-1, 1] |
+    | 5   | dyaw                | Rotation about the z-axis (yaw)                                                                               | [-1, 1] |
+    | 6   | dgrasp              | Grasp command. Values above a threshold indicate an attempt to grasp; below indicate release.                 | [-1, 1] |
 
     ## Observation Space
 
@@ -59,13 +59,17 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
 
     The state is a dictionary with the following keys:
 
-    - **tcp_pose (7 elements):** The position (3 elements) and orientation (quaternion, 4 elements) of the robot’s end-effector.
+    - **tcp_pose (7 elements):**  
+    The position (3 elements) and orientation (quaternion, 4 elements) of the robot’s end-effector.
     
-    - **tcp_vel (6 elements):** The linear and angular velocities of the end-effector.
+    - **tcp_vel (6 elements):**  
+    The linear and angular velocities of the end-effector.
     
-    - **gripper_pos (1 element):** The current opening of the gripper.
+    - **gripper_pos (1 element):**  
+    The current opening of the gripper.
     
-    - **gripper_vec (4 elements):** A vector representing the gripper state (e.g., one-hot encoding of open, closed, etc.).
+    - **gripper_vec (4 elements):**  
+    A vector representing the gripper state (e.g., one-hot encoding of open, closed, etc.).
 
     Thus, the overall state vector has 7 + 6 + 1 + 4 = 18 elements.
 
@@ -106,22 +110,22 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
     ## Arguments
 
     The environment accepts a variety of parameters upon instantiation:
-    | Parameter            | Type      | Default                        | Description                                                                                       |
+    | Parameter               | Type       | Default                        | Description                                                                                       |
     |----------------------   |------------|--------------------------------|---------------------------------------------------------------------------------------------------|
-    | `image_obs`            | bool       | True                           | Whether to include image observations.                                                            |
-    | `include_privileged_obs`| bool       | False                          | Whether to include privileged observations (e.g., object states not visible to the agent).      |
-    | `randomize_domain`     | bool       | True                           | Whether to apply domain randomization to lighting, camera, and object properties.                 |
-    | `ee_dof`               | int        | 6                              | Degrees of freedom for the end-effector (3 for position only; 6 for position and orientation).    |
-    | `control_dt`           | float      | 0.05                           | Time interval between control updates.                                                            |
-    | `physics_dt`           | float      | 0.002                          | Simulation time step.                                                                             |
-    | `width`                | int        | 480                            | Image width (if `image_obs` is True).                                                             |
-    | `height`               | int        | 480                            | Image height (if `image_obs` is True).                                                            |
-    | `pos_scale`            | float      | 0.008                          | Scaling factor for positional changes.                                                            |
-    | `rot_scale`            | float      | 0.5                            | Scaling factor for rotational changes.                                                            |
-    | `cameras`              | List[str]  | ["wrist1", "wrist2", "front"]  | List of camera names for rendering images.                                                        |
-    | `reward_type`          | str        | "dense"                        | Reward type; can be "dense" or "sparse".                                                          |
-    | `gripper_pause`        | bool       | False                          | If True, the simulation pauses briefly after a gripper action.                                    |
-    | `render_mode`          | str        | "rgb_array"                    | Rendering mode, e.g., "human" or "rgb_array".                                                     
+    | `image_obs`             | bool       | True                           | Whether to include image observations.                                                            |
+    | `include_privileged_obs`| bool       | False                          | Whether to include privileged observations (e.g., object states not visible to the agent).        |
+    | `randomize_domain`      | bool       | True                           | Whether to apply domain randomization to lighting, camera, and object properties.                 |
+    | `ee_dof`                | int        | 6                              | Degrees of freedom for the end-effector (3 for position only; 6 for position and orientation).    |
+    | `control_dt`            | float      | 0.05                           | Time interval between control updates.                                                            |
+    | `physics_dt`            | float      | 0.002                          | Simulation time step.                                                                             |
+    | `width`                 | int        | 480                            | Image width (if `image_obs` is True).                                                             |
+    | `height`                | int        | 480                            | Image height (if `image_obs` is True).                                                            |
+    | `pos_scale`             | float      | 0.008                          | Scaling factor for positional changes.                                                            |
+    | `rot_scale`             | float      | 0.5                            | Scaling factor for rotational changes.                                                            |
+    | `cameras`               | List[str]  | ["wrist1", "wrist2", "front"]  | List of camera names for rendering images.                                                        |
+    | `reward_type`           | str        | "dense"                        | Reward type; can be "dense" or "sparse".                                                          |
+    | `gripper_pause`         | bool       | False                          | If True, the simulation pauses briefly after a gripper action.                                    |
+    | `render_mode`           | str        | "rgb_array"                    | Rendering mode, e.g., "human" or "rgb_array".                                                  
     """
 
 
@@ -176,8 +180,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         self._CARTESIAN_BOUNDS = np.array([[-0.05, -0.2, 0.6], [0.55, 0.2, 0.95]], dtype=np.float32)
         self._ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/10],[np.pi/3, np.pi/6, np.pi/10]], dtype=np.float32)
         self.default_obj_pos = np.array([0.42, 0, 0.85])
-        self._ripe_fruits_picked = 0
-        self._unripe_fruits_picked = 0
+        self._blocks_picked = 0
         self.gripper_sleep = 0.6
         self.grasp_threshold = 0.333
         MAX_OBSERVABLE_STRAWBERRIES = 8
@@ -495,8 +498,8 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
             vine_body_id = self.model.body(vine_body_name).id
             # Randomize the distractor vine's position.
             distract_pos_noise = np.random.uniform(low=distract_pos_noise_low,
-                                                 high=distract_pos_noise_high,
-                                                 size=3)
+                                                high=distract_pos_noise_high,
+                                                size=3)
             vine_body = self.model.body(f"vine{i}")
             self.model.body_pos[vine_body.id] = target_pos + distract_pos_noise
 
@@ -548,7 +551,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
                                 if colour == "red":
                                     self.red_blocks.append(i)
                                 elif colour == "green":
-                                    self.green_blocks.append(i)                                        
+                                    self.green_blocks.append(i)                               
                             if geom_name == name:
                                 self.model.geom_group[geom_id] = 3
                                 self.model.geom_contype[geom_id] = 1
@@ -647,9 +650,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
             self._block_success = self._block_init.copy()
             self._block_success[0] = self._x_success
             self._block_success[2] = self._z_success
-            self._ripe_fruits_picked = 0
-            self._unripe_fruits_picked = 0
-            self._grasped_unripe_pending = set()
+            self._blocks_picked = 0
 
             for i in self.red_blocks:
                 self.red_positions[i] = self.data.sensor(f"block{i}_pos").data.copy()
@@ -680,8 +681,8 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
             dot = np.clip(dot, -1.0, 1.0)
             orient_diff = 2 * np.arccos(dot)
 
-            pos_threshold = 0.1   
-            orient_threshold = 0.2   
+            pos_threshold = 0.1    
+            orient_threshold = 0.2    
 
             if pos_diff < pos_threshold and orient_diff < orient_threshold:
                 return self._get_obs()
@@ -861,7 +862,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         
         Returns:
             cartesian_speed: A (6,) numpy array where the first 3 elements are the
-                             linear velocities and the last 3 elements are the angular velocities.
+                            linear velocities and the last 3 elements are the angular velocities.
         """
         dq = self.data.qvel[self._panda_dof_ids]
         J_v = np.zeros((3, self.model.nv), dtype=np.float64)
@@ -961,7 +962,17 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         precise distance/alignment measurements.
         
         Returns:
-            dict: Dictionary containing privileged information.
+            dict: Dictionary containing privileged information with keys:
+                - min_red_dist: Distance to nearest red strawberry
+                - radial_dist: Alignment quality measure
+                - good_grasp: Whether a good grasp is detected
+                - bad_grasp: Whether a bad grasp is detected
+                - collision_detected: Whether unwanted collisions occurred
+                - stem_in_box: Whether a red stem is in the gripper box
+                - left_finger_contacts: Number of left finger contacts
+                - right_finger_contacts: Number of right finger contacts
+                - total_displacement: Total displacement of distractor objects
+                - grasped_idx: Index of grasped strawberry (if any)
         """
 
         tcp_pos = self.data.sensor("long_pinch_pos").data
@@ -980,8 +991,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
             "left_finger_contacts": 0,
             "right_finger_contacts": 0,
             "total_displacement": 0.0,
-            "grasped_idx": None,
-            "grasped_unripe_idx": None,
+            "grasped_idx": None  # Add this to track which strawberry was grasped
         }
         
         # Distance to nearest red strawberry
@@ -990,7 +1000,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
             for red_idx in self.red_blocks:
                 stem_pos = self.data.sensor(f"stem{red_idx}_pos").data
                 dists[red_idx] = (np.linalg.norm(stem_pos - left_pinch_pos) + 
-                                  np.linalg.norm(stem_pos - right_pinch_pos)) / 2.0
+                                np.linalg.norm(stem_pos - right_pinch_pos)) / 2.0
             
             if dists:
                 closest_red_idx = min(dists, key=dists.get)
@@ -1004,7 +1014,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
                 proj_y = np.dot(vec_to_stem, gripper_y_axis)
                 info["radial_dist"] = abs(proj_y)
                 
-        # Check how many RED stems are in the gripper box
+         # Check how many RED stems are in the gripper box
         if hasattr(self, 'red_blocks'):
             for red_idx in self.red_blocks:
                 try:
@@ -1015,80 +1025,102 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
                     pass
 
         # Check how many GREEN stems are in the gripper box
-        green_stem_in_box = False
+        green_vine_part_in_box = False
         if hasattr(self, 'green_blocks'):
             for green_idx in self.green_blocks:
                 try:
                     stem_pos = self.data.sensor(f"stem{green_idx}_pos").data
                     if self.is_stem_in_gripper_box(stem_pos):
-                        green_stem_in_box = True
-                        break 
+                        green_vine_part_in_box = True
+                        break  # A green vine is in the box, no need to check other green vines
                 except Exception:
                     pass
-        info["green_stems_in_box_count"] = 1 if green_stem_in_box else 0
+                # Determine the character prefix for the vine's geoms (b for 2, c for 3, etc.)
+                prefix_char = chr(ord('`') + green_idx)
+                # Loop through the 4 geoms that make up the vine (e.g., bG0, bG1, bG2, bG3)
+                for i in range(4):
+                    geom_name = f"{prefix_char}G{i}"
+                    try:
+                        geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+                        geom_pos = self.data.geom_xpos[geom_id]
+                        if self.is_stem_in_gripper_box(geom_pos):
+                            green_vine_part_in_box = True
+                            break  # A part is in the box, no need to check other parts of this vine
+                    except KeyError:
+                        # This geom name doesn't exist, which is fine. Continue to the next.
+                        pass
+                if green_vine_part_in_box:
+                    break # A green vine is in the box, no need to check other green vines
+
+        # Update the info dict based on our findings. This re-uses the existing reward logic.
+        info["green_stems_in_box_count"] = 1 if green_vine_part_in_box else 0
         
-        # Contact analysis
+        # Contact analysis - track which stems each finger contacts
         left_contacts = 0
         right_contacts = 0
         collision_detected = False
-        left_red_stem_contacts = set()
-        right_red_stem_contacts = set()
-        left_green_stem_contacts = set()
-        right_green_stem_contacts = set()
-
+        left_finger_contact_good = False
+        right_finger_contact_good = False
+        left_finger_contact_bad = False
+        right_finger_contact_bad = False
+        grasped_idx = None
+        
+        allowed_prefixes = [f"{chr(ord('`')+i)}G3" for i in self.red_blocks]
+        
         for i in range(self.data.ncon):
             geom1_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom1) or ""
             geom2_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, self.data.contact[i].geom2) or ""
-
-            is_finger_contact = "finger" in geom1_name or "finger" in geom2_name
-            is_block_contact = "block" in geom1_name or "block" in geom2_name
-
-            if is_finger_contact and is_block_contact:
-                collision_detected = True
             
-            def get_stem_idx(name):
-                if name.startswith("stem"):
-                    try:
-                        return int(name[len("stem"):])
-                    except ValueError:
-                        return None
-                return None
-
+            # Check for unwanted collisions
+            if ("finger" in geom1_name) or ("finger" in geom2_name):
+                if ("block" in geom1_name) or ("block" in geom2_name):
+                    collision_detected = True
+            
+            # Analyze left finger contacts
             if "left_finger_inner" in (geom1_name, geom2_name):
                 left_contacts += 1
-                other_name = geom1_name if "left" in geom2_name else geom2_name
-                stem_idx = get_stem_idx(other_name)
-                if stem_idx is not None:
-                    if stem_idx in self.red_blocks:
-                        left_red_stem_contacts.add(stem_idx)
-                    elif stem_idx in self.green_blocks:
-                        left_green_stem_contacts.add(stem_idx)
-
+                other = geom1_name if geom2_name == "left_finger_inner" else geom2_name
+                if other.startswith("stem"):
+                    try:
+                        stem_idx = int(other[len("stem"):])
+                        if stem_idx in self.red_blocks:
+                            left_finger_contact_good = True
+                            grasped_idx = stem_idx
+                    except ValueError:
+                        pass
+                elif other not in allowed_prefixes and other != "right_finger_inner":
+                    left_finger_contact_bad = True
+                    
+            # Analyze right finger contacts
             if "right_finger_inner" in (geom1_name, geom2_name):
                 right_contacts += 1
-                other_name = geom1_name if "right" in geom2_name else geom2_name
-                stem_idx = get_stem_idx(other_name)
-                if stem_idx is not None:
-                    if stem_idx in self.red_blocks:
-                        right_red_stem_contacts.add(stem_idx)
-                    elif stem_idx in self.green_blocks:
-                        right_green_stem_contacts.add(stem_idx)
-
-        common_red_stems = left_red_stem_contacts.intersection(right_red_stem_contacts)
-        common_green_stems = left_green_stem_contacts.intersection(right_green_stem_contacts)
-
-        good_grasp = len(common_red_stems) == 1
-        bad_grasp = len(common_green_stems) > 0
-
+                other = geom1_name if geom2_name == "right_finger_inner" else geom2_name
+                if other.startswith("stem"):
+                    try:
+                        stem_idx = int(other[len("stem"):])
+                        if stem_idx in self.red_blocks:
+                            right_finger_contact_good = True
+                            # Only update grasped_idx if both fingers contact the same stem
+                            if grasped_idx is None or grasped_idx == stem_idx:
+                                grasped_idx = stem_idx
+                            else:
+                                # Different stems contacted by different fingers - no good grasp
+                                grasped_idx = None
+                    except ValueError:
+                        pass
+                elif other not in allowed_prefixes and other != "left_finger_inner":
+                    right_finger_contact_bad = True
+        
+        # Good grasp only if BOTH fingers contact good targets
+        good_grasp = left_finger_contact_good and right_finger_contact_good
+        bad_grasp = left_finger_contact_bad and right_finger_contact_bad
+        
         info["left_finger_contacts"] = left_contacts
         info["right_finger_contacts"] = right_contacts
         info["collision_detected"] = collision_detected
         info["good_grasp"] = good_grasp
         info["bad_grasp"] = bad_grasp
-        if good_grasp:
-            info["grasped_idx"] = common_red_stems.pop()
-        if bad_grasp:
-            info["grasped_unripe_idx"] = common_green_stems.pop()
+        info["grasped_idx"] = grasped_idx if good_grasp else None
         
         # Total distractor displacement
         total_displacement = 0.0
@@ -1122,16 +1154,22 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         pos_left = self.data.site('left_pinch').xpos
         pos_right = self.data.site('right_pinch').xpos
         # 2. Define the box's center and orientation
+        # The origin is the midpoint between the two fingers
         box_origin = (pos_left + pos_right) / 2
+        # Use the main 'pinch' site for a stable orientation reference
         box_orientation = self.data.site('long_pinch').xmat.reshape(3, 3)
         # 3. Define the box's dimensions
+        # Width is calculated live, height and depth are from constants
         box_width = np.linalg.norm(pos_left - pos_right)
         # 4. Transform the stem's position into the box's local coordinate frame
         vec_world = stem_pos - box_origin
         local_stem_pos = box_orientation.T @ vec_world
         # 5. Perform the checks in the simple, local coordinate system
+        # Check height against the constant BOX_HEIGHT
         in_height = -BOX_HEIGHT / 2 <= local_stem_pos[0] <= BOX_HEIGHT / 2
+        # Check width against the live-measured box_width
         in_width = -box_width / 2 <= local_stem_pos[1] <= box_width / 2
+        # Check depth against the constant BOX_DEPTH. Assumes origin is in the middle of the depth.
         in_depth = -BOX_DEPTH / 2 <= local_stem_pos[2] <= BOX_DEPTH / 2
 
         return in_height and in_width and in_depth
@@ -1141,12 +1179,17 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         
         # --- TCP pose and velocity ---
         tcp_world_pos = self.data.sensor("pinch_pos").data.copy()
+        # Ensure quaternion is in xyzw order for Rotation, then back to wxyz if needed by convention elsewhere
+        # MuJoCo sensors output wxyz, np.roll(q, -1) makes it xyzw
         tcp_world_quat_xyzw = np.roll(self.data.sensor("pinch_quat").data, -1).copy() 
         
         if self.randomize_domain:
+            # Noise for position
+            # Use a default from cfg or a fallback value
             position_noise_std = self.cfg.get("domain_randomization", {}).get("ee_pos_noise_std", 0.005) 
             tcp_world_pos += np.random.normal(0, position_noise_std, size=3)
             
+            # Noise for orientation
             orientation_noise_std = self.cfg.get("domain_randomization", {}).get("ee_ori_noise_std", 0.005)
             orientation_noise_axis_angle = np.random.normal(0, orientation_noise_std, size=3)
             small_rotation = Rotation.from_rotvec(orientation_noise_axis_angle)
@@ -1154,6 +1197,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
             new_rotation = small_rotation * current_rotation
             tcp_world_quat_xyzw = new_rotation.as_quat() # Returns xyzw, normalized
         
+        # Storing tcp_pose as [pos (3), quat_xyzw (4)]
         obs["state"]["tcp_pose"] = np.concatenate([tcp_world_pos, tcp_world_quat_xyzw]).astype(np.float32)
         obs["state"]["tcp_vel"] = self._get_vel() 
         obs["state"]["gripper_pos"] = np.array([2 * self.data.qpos[8] / self._GRIPPER_HOME[0]], dtype=np.float32)
@@ -1202,7 +1246,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         collision_detected = privileged_info["collision_detected"]
         red_stems_in_box_count = privileged_info["red_stems_in_box_count"]
         green_stems_in_box_count = privileged_info["green_stems_in_box_count"]
-        
+         
         
         ## Rewards
         r_red = - np.tanh(20 * min_red_dist) if min_red_dist != float('inf') else 0.0
@@ -1244,8 +1288,9 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
             dist_from_init = np.linalg.norm(curr_pos - init_pos)
             if dist_from_init < 0.05:
                 r_grasp = 1.0
-                self._ripe_fruits_picked += 1
+                self._blocks_picked += 1
                 # Make the strawberry invisible by updating its geoms.
+                # We assume its associated bodies are "blockX", "blockX_big", "blockX_small".
                 for suffix in ["", "_big", "_small"]:
                     body_name = f"block{grasped_idx}{suffix}"
                     try:
@@ -1256,6 +1301,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
                     geom_count = self.model.body_geomnum[body.id]
                     for i in range(geom_count):
                         geom_id = geom_start + i
+                        # Set visual group to 3, and disable collision.
                         self.model.geom_group[geom_id] = 3
                         self.model.geom_contype[geom_id] = 0
                         self.model.geom_conaffinity[geom_id] = 0
@@ -1266,14 +1312,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
                 if grasped_idx in self.red_blocks:
                     self.red_blocks.remove(grasped_idx)        
             else:
-                r_grasp = 0.0    
-        
-        # Log grasp attempt on an unripe fruit
-        unripe_gid = privileged_info.get("grasped_unripe_idx", None)
-        if bad_grasp and unripe_gid is not None:
-            if unripe_gid not in self._grasped_unripe_pending:
-                self._unripe_fruits_picked += 1
-                self._grasped_unripe_pending.add(unripe_gid)
+                r_grasp = 0.0   
 
         # Penalty for being alive
         r_alive = -1.0 
@@ -1285,36 +1324,35 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         info = {}
         
         rewards = {'r_grasp': r_grasp, 
-                   'r_red': r_red, 
-                   'r_alignment': r_alignment,
-                   'r_in_box': r_in_box,
-                   'r_green_in_box_penalty': r_green_in_box_penalty,
-                   'r_col': r_col, 
-                   'r_dist': r_dist, 
-                   'r_attempt_close': r_attempt_close, 
-                   'r_bad_grasp': r_bad_grasp, 
-                   'r_energy': r_energy, 
-                   'r_smooth': r_smooth,
-                   'r_gripper': r_gripper,
-                   'r_alive': r_alive}
+                'r_red': r_red, 
+                'r_alignment': r_alignment,
+                'r_in_box': r_in_box,
+                'r_green_in_box_penalty': r_green_in_box_penalty,
+                'r_col': r_col, 
+                'r_dist': r_dist, 
+                'r_attempt_close': r_attempt_close, 
+                'r_bad_grasp': r_bad_grasp, 
+                'r_energy': r_energy, 
+                'r_smooth': r_smooth,
+                'r_gripper': r_gripper,
+                'r_alive': r_alive}
         reward_scales = {'r_grasp': 20.0, 
-                         'r_red': 4.0, 
-                         'r_alignment': 1.0,
-                         'r_in_box': 1.0,
-                         'r_green_in_box_penalty': 1.0,
-                         'r_col': 1.0, 
-                         'r_dist': 1.0, 
-                         'r_attempt_close': 2.0, 
-                         'r_bad_grasp': 5.0, 
-                         'r_energy': 5.0, 
-                         'r_smooth': 5.0,
-                         'r_gripper': 1.0,
-                         'r_alive': 0.0}
+                        'r_red': 4.0, 
+                        'r_alignment': 1.0,
+                        'r_in_box': 1.0,
+                        'r_green_in_box_penalty': 1.0,
+                        'r_col': 1.0, 
+                        'r_dist': 1.0, 
+                        'r_attempt_close': 2.0, 
+                        'r_bad_grasp': 5.0, 
+                        'r_energy': 5.0, 
+                        'r_smooth': 5.0,
+                        'r_gripper': 1.0,
+                        'r_alive': 0.0}
         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
         info = rewards
-        info['ripe_fruits_picked'] = self._ripe_fruits_picked
-        info['unripe_fruits_picked'] = self._unripe_fruits_picked
+        info['blocks_picked'] = self._blocks_picked
 
         info['success'] = completed
         return reward, info

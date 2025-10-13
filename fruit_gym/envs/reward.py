@@ -1,4 +1,3 @@
-# fruit_gym/envs/reward.py
 from __future__ import annotations
 import numpy as np
 from dataclasses import dataclass
@@ -66,7 +65,7 @@ def _is_point_in_gripper_box(env, point_world: np.ndarray) -> bool:
     local = box_R.T @ (point_world - box_origin)
     in_h = (-BOX_HEIGHT/2) <= local[0] <= (BOX_HEIGHT/2)
     in_w = (-box_width/2) <= local[1] <= (box_width/2)
-    in_d = (-BOX_DEPTH/2) <= local[2] <= (BOX_DEPTH/2)
+    in_d = (-BOX_DEPTH/2) <= local[2] <= (box_width/2)
     return bool(in_h and in_w and in_d)
 
 def _is_allowed_nonstem_contact(name: str) -> bool:
@@ -135,6 +134,7 @@ def _compute_privileged_info(env) -> dict:
         "right_finger_contacts": 0,
         "total_displacement": 0.0,
         "grasped_idx": None,
+        "grasped_unripe_idx": None,
     }
 
     # Nearest red stem (compute from stem geom positions)
@@ -187,10 +187,11 @@ def _compute_privileged_info(env) -> dict:
 
     # Contacts (ID-based): detect good/bad grasp + collisions
     left_contacts = right_contacts = 0
-    left_good = right_good = False
-    left_bad = right_bad = False
+    left_red_stem_contacts = set()
+    right_red_stem_contacts = set()
+    left_green_stem_contacts = set()
+    right_green_stem_contacts = set()
     collision = False
-    grasped_idx = None
 
     for i in range(env.data.ncon):
         c = env.data.contact[i]
@@ -199,29 +200,27 @@ def _compute_privileged_info(env) -> dict:
         name1 = mujoco.mj_id2name(env.model, mujoco.mjtObj.mjOBJ_GEOM, g1) or ""
         name2 = mujoco.mj_id2name(env.model, mujoco.mjtObj.mjOBJ_GEOM, g2) or ""
 
-        # Collision penalty: finger vs fruit*, unless it's a 'last' geom
-        if ("finger" in name1) or ("finger" in name2):
-            def _bad(nm: str) -> bool:
-                return ("fruit" in nm) and (not _is_allowed_nonstem_contact(nm))
-            if _bad(name1) or _bad(name2):
+        # Collision penalty: finger vs non-stem, non-allowed fruit part
+        is_finger_contact = "finger" in name1 or "finger" in name2
+        is_fruit_contact = "fruit" in name1 or "fruit" in name2
+        if is_finger_contact and is_fruit_contact:
+            # Check if contact is with an allowed geom or a stem (handled separately)
+            g1_ok = _is_allowed_nonstem_contact(name1) or g1 in stem_to_fruit
+            g2_ok = _is_allowed_nonstem_contact(name2) or g2 in stem_to_fruit
+            if not (g1_ok and g2_ok):
                 collision = True
 
+        # Grasp detection: finger vs stem
         # LEFT finger
         if "left_finger_inner" in (name1, name2):
             left_contacts += 1
             other_gid = g1 if name2 == "left_finger_inner" else g2
-            # If other is a stem geom we can map it directly
             if other_gid in stem_to_fruit:
                 sidx = stem_to_fruit[other_gid]
                 if sidx in red_ids:
-                    left_good = True
-                    grasped_idx = sidx
-                else:
-                    left_bad = True
-            else:
-                other_name = name1 if name2 == "left_finger_inner" else name2
-                if other_name != "right_finger_inner" and not _is_allowed_nonstem_contact(other_name):
-                    left_bad = True
+                    left_red_stem_contacts.add(sidx)
+                elif sidx in green_ids:
+                    left_green_stem_contacts.add(sidx)
 
         # RIGHT finger
         if "right_finger_inner" in (name1, name2):
@@ -230,24 +229,27 @@ def _compute_privileged_info(env) -> dict:
             if other_gid in stem_to_fruit:
                 sidx = stem_to_fruit[other_gid]
                 if sidx in red_ids:
-                    right_good = True
-                    if grasped_idx is None or grasped_idx == sidx:
-                        grasped_idx = sidx
-                    else:
-                        grasped_idx = None  # different stems → not a good grasp
-                else:
-                    right_bad = True
-            else:
-                other_name = name1 if name2 == "right_finger_inner" else name2
-                if other_name != "left_finger_inner" and not _is_allowed_nonstem_contact(other_name):
-                    right_bad = True
+                    right_red_stem_contacts.add(sidx)
+                elif sidx in green_ids:
+                    right_green_stem_contacts.add(sidx)
+
+    # Analyze contacts to determine grasp type
+    common_red_stems = left_red_stem_contacts.intersection(right_red_stem_contacts)
+    common_green_stems = left_green_stem_contacts.intersection(right_green_stem_contacts)
+
+    good_grasp = len(common_red_stems) == 1
+    bad_grasp = len(common_green_stems) > 0
 
     info["left_finger_contacts"] = left_contacts
     info["right_finger_contacts"] = right_contacts
     info["collision_detected"] = collision
-    info["good_grasp"] = bool(left_good and right_good)
-    info["bad_grasp"] = bool(left_bad and right_bad)
-    info["grasped_idx"] = grasped_idx if info["good_grasp"] else None
+    info["good_grasp"] = good_grasp
+    info["bad_grasp"] = bad_grasp
+    if good_grasp:
+        info["grasped_idx"] = common_red_stems.pop()
+    if bad_grasp:
+        info["grasped_unripe_idx"] = common_green_stems.pop()
+
 
     # Displacement (using representative fruit geom)
     total = 0.0
@@ -320,9 +322,11 @@ def compute_reward(env, action: np.ndarray) -> tuple[float, dict]:
         if priv["min_red_dist"] < 0.03:
             r_attempt_close = 1.0
 
-    # Grasp logic (schedule disappearance)
+    # Grasp logic
     r_grasp = 0.0
     r_bad_grasp = -float(priv["bad_grasp"])
+
+    # Successful grasp of a ripe fruit
     gid = priv.get("grasped_idx", None)
     if priv["good_grasp"] and (not priv["bad_grasp"]) and gid is not None:
         cur = _fruit_rep_pos(env, gid)
@@ -330,9 +334,18 @@ def compute_reward(env, action: np.ndarray) -> tuple[float, dict]:
         if cur is not None and init is not None and np.linalg.norm(cur - init) < 0.05:
             r_grasp = 1.0
             if gid not in env._grasped_pending:
-                env._blocks_picked = getattr(env, "_blocks_picked", 0) + 1
+                env._ripe_fruits_picked = getattr(env, "_ripe_fruits_picked", 0) + 1
                 env._grasped_pending.add(gid)
                 env._pending_removals[gid] = int(cfg.disappear_delay_steps)
+
+    # Log grasp attempt on an unripe fruit
+    unripe_gid = priv.get("grasped_unripe_idx", None)
+    if priv["bad_grasp"] and unripe_gid is not None:
+        if not hasattr(env, "_grasped_unripe_pending"):
+            env._grasped_unripe_pending = set()
+        if unripe_gid not in env._grasped_unripe_pending:
+            env._unripe_fruits_picked = getattr(env, "_unripe_fruits_picked", 0) + 1
+            env._grasped_unripe_pending.add(unripe_gid)
 
     r_alive = -1.0
 
@@ -356,6 +369,7 @@ def compute_reward(env, action: np.ndarray) -> tuple[float, dict]:
     success = (len(getattr(env, "red_blocks", [])) == 0)
 
     info = dict(rewards)
-    info["blocks_picked"] = getattr(env, "_blocks_picked", 0)
+    info["ripe_fruits_picked"] = getattr(env, "_ripe_fruits_picked", 0)
+    info["unripe_fruits_picked"] = getattr(env, "_unripe_fruits_picked", 0)
     info["success"] = success
     return reward, info

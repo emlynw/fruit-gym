@@ -25,12 +25,12 @@ def main():
         # 'r_alignment': 100.0,
     }
 
-    env = gym.make("PickMultiStrawbHardEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
-                   height=camera_res, gripper_pause=False, use_potential_rewards=False, include_privileged_obs=True, reward_scales=reward_scales)
+    # env = gym.make("PickMultiStrawbHardEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
+    #                height=camera_res, gripper_pause=False, use_potential_rewards=False, include_privileged_obs=True, reward_scales=reward_scales)
     # env = gym.make("PickMultiStrawbEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
     #                height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
-    # env = gym.make("PickMultiStrawbEnvOld", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
-    #             height=camera_res, gripper_pause=False, include_privileged_obs=True)
+    env = gym.make("PickMultiStrawbEnvOld", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
+                height=camera_res, gripper_pause=False, include_privileged_obs=True)
     # env = gym.make("PickStrawbEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
     #                height=camera_res, gripper_pause=False)
     env = TimeLimit(env, max_episode_steps=250)
@@ -64,6 +64,7 @@ def main():
                 action = info['intervene_action']
 
             obs, reward, terminated, truncated, info = env.step(action)
+            print(f"picked: {info['ripe_fruits_picked']}, bad grasps: {info['unripe_fruits_picked']}")
             for camera in cameras:
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
                 # Write reward on the frame
