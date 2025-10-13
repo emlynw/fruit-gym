@@ -8,6 +8,8 @@ from .scale import ScaleRandomiser
 from .spawner import SpawnerRandomiser
 from .robot_pose import RobotPoseRandomiser
 from .meshes import MeshVariantRandomiser
+from .camera_pose import CameraPoseRandomiser
+from .table import TableRandomiser
 
 from .factory import build_randomisers   
 
@@ -24,5 +26,7 @@ __all__ = [
     "MeshVariantRandomiser",
     "SpawnerRandomiser",
     "RobotPoseRandomiser",
+    "CameraPoseRandomiser",
+    "TableRandomiser",
     "build_randomisers",
 ]

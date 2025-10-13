@@ -64,8 +64,8 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         physics_dt: float = 0.001,
         width: int = 480,
         height: int = 480,
-        pos_scale: float = 0.008,
-        rot_scale: float = 0.5,
+        pos_scale: float = 0.0045,
+        rot_scale: float = 0.065,
         cameras: Optional[List[str]] = None,
         reward_type: str = "dense",
         reward_scales: Optional[dict] = None,
@@ -242,6 +242,11 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
             setattr(self, f"{cam}_pos", self.model.body_pos[self.model.body(cam).id].copy())
             setattr(self, f"{cam}_quat", self.model.body_quat[self.model.body(cam).id].copy())
         self.init_light_pos = self.model.body_pos[self.model.body("light0").id].copy()
+
+        # Store initial camera poses for DR
+        for camera_name in self.cameras:
+            setattr(self, f"{camera_name}_pos", self.model.body_pos[self.model.body(camera_name).id].copy())
+            setattr(self, f"{camera_name}_quat", self.model.body_quat[self.model.body(camera_name).id].copy())
 
         # Reference EE orientation (kept for rotation clipping)
         self.initial_position = np.array([0.1, 0.0, 0.75], dtype=np.float32)

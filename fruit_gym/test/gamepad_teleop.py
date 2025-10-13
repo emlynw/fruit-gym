@@ -21,12 +21,12 @@ def main():
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
     reward_scales = {
-        'r_red': 100.0,
-        'r_alignment': 100.0,
+        # 'r_red': 100.0,
+        # 'r_alignment': 100.0,
     }
 
     env = gym.make("PickMultiStrawbHardEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
-                   height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
+                   height=camera_res, gripper_pause=False, use_potential_rewards=False, include_privileged_obs=True, reward_scales=reward_scales)
     # env = gym.make("PickMultiStrawbEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
     #                height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
     # env = gym.make("PickMultiStrawbEnvOld", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 

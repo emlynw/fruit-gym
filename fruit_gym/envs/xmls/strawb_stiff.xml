@@ -3,7 +3,7 @@
 
   <default>
     <default class="vine_joint">
-      <joint type="ball" stiffness="0.02" armature="0.0001" damping="0.01" actuatorfrclimited="false" group="3"/>
+      <joint type="ball" stiffness="0.01" armature="0.0001" damping="0.01" actuatorfrclimited="false" group="3"/>
     </default>
     <default class="vine_capsule">
       <geom type="capsule" mass="0.0001"

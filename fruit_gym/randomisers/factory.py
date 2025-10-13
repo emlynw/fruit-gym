@@ -28,8 +28,10 @@ from fruit_gym.randomisers import (
     PoseRandomiser,
     ScaleRandomiser,
     MeshVariantRandomiser,
+    TableRandomiser,
     SpawnerRandomiser,
     RobotPoseRandomiser,
+    CameraPoseRandomiser,
 )
 
 __all__ = ["build_randomisers"]
@@ -250,6 +252,44 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
                 rot_enabled=rot_enabled,
                 yaw_only=yaw_only,
                 ang_range=ang_range,
+            )
+        )
+
+    # ---------------- camera pose ------------------------------------------
+    if dr.get("camera_pose", {}).get("enabled", False): 
+        c_cfg = dr["camera_pose"]
+        pos_lo = np.asarray(c_cfg.get("position_range_low", (0.0, 0.0, 0.0)), float)
+        pos_hi = np.asarray(c_cfg.get("position_range_high", (0.0, 0.0, 0.0)), float)
+        rot_enabled = c_cfg.get("rotation_enabled", False)
+        ang_range = tuple(c_cfg.get("angle_range", (-0.15, 0.15)))
+        yaw_only = c_cfg.get("yaw_only", False)
+        cam_names = c_cfg.get("camera_names", None)  # None → all cameras
+        rand.append(
+            CameraPoseRandomiser(
+                cam_names=cam_names,
+                pos_lo=pos_lo,
+                pos_hi=pos_hi,
+                rot_enabled=rot_enabled,
+                yaw_only=yaw_only,
+                ang_range=ang_range,
+            )
+        )
+
+    # ---------------- table -------------------------------------------------
+    if dr.get("table", {}).get("enabled", False):
+        t_cfg = dr["table"]
+        pos_lo = np.asarray(t_cfg.get("position_range_low", (-0.05, -0.02, -0.05)), float)
+        pos_hi = np.asarray(t_cfg.get("position_range_high", (0.05, 0.02, 0.05)), float)
+        rand.append(
+            TableRandomiser(
+                body_name=t_cfg.get("body_name", "table"),
+                geom_name=t_cfg.get("geom_name", "table"),
+                pos_lo=pos_lo,
+                pos_hi=pos_hi,
+                rgb_lo=t_cfg.get("rgb_lo", (0.3, 0.3, 0.3)),
+                rgb_hi=t_cfg.get("rgb_hi", (0.9, 0.9, 0.9)),
+                alpha=float(t_cfg.get("alpha", 1.0)),
+                p_absent=float(t_cfg.get("p_absent", 0.3)),
             )
         )
 

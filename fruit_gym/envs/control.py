@@ -5,7 +5,7 @@ from typing import Tuple
 import numpy as np
 import mujoco
 
-from fruit_gym.controllers.opspace import opspace
+from fruit_gym.controllers.opspace_2 import opspace
 
 
 def handle_gripper_control(env, action: np.ndarray) -> Tuple[bool, float]:

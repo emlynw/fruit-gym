@@ -66,7 +66,7 @@ class PoseRandomiser(Randomiser):
         rot_angle_range: tuple[float, float] = (-0.15, 0.15),
         yaw_only: bool = False,
         leaves_tag: str = "leaves",
-        leaves_z_offset: float = 0.1
+        leaves_z_offset: float = 0.06
     ):
         self.prefix = str(name_prefix)
         self.pos_lo = np.asarray(pos_lo, dtype=float)

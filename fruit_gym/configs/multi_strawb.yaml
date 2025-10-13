@@ -21,23 +21,25 @@ domain_randomization:
 
   robot_pose:
     enabled: true
-    position_range_low: [-0.04, -0.05, 0.00]
-    position_range_high: [0.04, 0.05, 0.10]
+    position_range_low: [-0.04, -0.1, 0.00]
+    position_range_high: [0.04, 0.1, 0.10]
     rotation_enabled: true
     angle_range: [-0.5, 0.5]
     yaw_only: false
 
-  cameras:
+  camera_pose:
     enabled: true
-    front:
-      position_noise_low: [-0.05, -0.05, -0.02]
-      position_noise_high: [0.05, 0.05, 0.02]
-      quat_noise_range: [-0.02, 0.02]
-    wrist1:
-      quat_noise_range: [-0.02, 0.02]
-    wrist2:
-      quat_noise_range: [-0.02, 0.02]
+    position_range_low: [-0.005, -0.005, -0.005]
+    position_range_high: [0.005, 0.005, 0.005]
+    rotation_enabled: true
+    angle_range: [-0.01, 0.01]
+    yaw_only: false
 
+  table:
+    enabled: true
+    position_range_low: [-0.08, -0.02, -0.05]
+    position_range_high: [0.08, 0.02, 0.05]
+    p_absent: 0.1
 
   floor:
     enabled: true
@@ -82,8 +84,8 @@ domain_randomization:
     rotation_enabled: true
     yaw_only: False
     rotation_angle_range: [-0.05, 0.05]
-    position_range_low: [-0.06, -0.1, -0.02]
-    position_range_high: [0.06, 0.1, 0.02]
+    position_range_low: [-0.06, -0.06, -0.02]
+    position_range_high: [0.06, 0.06, 0.02]
 
   object_scale:
     enabled: true
