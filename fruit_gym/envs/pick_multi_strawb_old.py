@@ -1264,6 +1264,11 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
         r_smooth = -np.tanh(0.5*np.linalg.norm(action[:-1] - self.prev_action[:-1]))
         self.prev_action = action
 
+        if np.array_equal(self.gripper_vec, self.gripper_dict["closing"]) or np.array_equal(self.gripper_vec, self.gripper_dict["opening"]):
+            r_gripper = -1.0
+        else:
+            r_gripper = 0.0
+
         # Reward for attempting to close gripper when very close to a red strawberry
         r_attempt_close = 0.0
         GRASP_ATTEMPT_DISTANCE_THRESHOLD = 0.03 # meters (3cm)
@@ -1329,6 +1334,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
                 'r_bad_grasp': r_bad_grasp, 
                 'r_energy': r_energy, 
                 'r_smooth': r_smooth,
+                'r_gripper': r_gripper,
                 'r_alive': r_alive}
         reward_scales = {'r_grasp': 20.0, 
                         'r_red': 4.0, 
@@ -1341,6 +1347,7 @@ class PickMultiStrawbEnvOld(MujocoEnv, utils.EzPickle):
                         'r_bad_grasp': 5.0, 
                         'r_energy': 5.0, 
                         'r_smooth': 5.0,
+                        'r_gripper': 1.0,
                         'r_alive': 0.0}
         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
