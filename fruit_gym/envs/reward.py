@@ -12,21 +12,38 @@ class RewardConfig:
     reward_scales: dict | None = None
 
     def scales(self) -> dict:
-        d = {
-            "r_grasp": 8.0,
-            "r_red": 4.0,
-            "r_alignment": 1.0,
-            "r_in_box": 1.0,
-            "r_green_in_box_penalty": 1.0,
-            "r_col": 1.0,
-            "r_dist": 1.0,
-            "r_attempt_close": 2.0,
-            "r_bad_grasp": 2.0,
-            "r_energy": 1.0,
-            "r_smooth": 1.0,
-            "r_gripper": 0.0,
-            "r_alive": 0.0,
-        }
+        if self.use_potential_rewards:
+            d = {
+                "r_grasp": 8.0,
+                "r_red": 100.0,
+                "r_alignment": 100.0,
+                "r_in_box": 1.0,
+                "r_green_in_box_penalty": 1.0,
+                "r_col": 1.0,
+                "r_dist": 1.0,
+                "r_attempt_close": 2.0,
+                "r_bad_grasp": 2.0,
+                "r_energy": 0.5,
+                "r_smooth": 0.5,
+                "r_gripper": 0.0,
+                "r_alive": 0.0,
+            }
+        else:
+            d = {
+                "r_grasp": 8.0,
+                "r_red": 4.0,
+                "r_alignment": 1.0,
+                "r_in_box": 1.0,
+                "r_green_in_box_penalty": 1.0,
+                "r_col": 1.0,
+                "r_dist": 1.0,
+                "r_attempt_close": 2.0,
+                "r_bad_grasp": 2.0,
+                "r_energy": 1.0,
+                "r_smooth": 1.0,
+                "r_gripper": 0.0,
+                "r_alive": 0.0,
+            }
         if self.reward_scales:
             d.update(self.reward_scales)
         return d
@@ -279,6 +296,11 @@ def _phi_align(priv: dict) -> float:
         return 0.0
     return float(-priv["radial_dist"])
 
+def _phi_inbox(priv: dict) -> float:
+    """1.0 if exactly one red stem is in the box and no green stems are in the box; else 0.0."""
+    return 1.0 if (priv["red_stems_in_box_count"] == 1 and priv["green_stems_in_box_count"] == 0) else 0.0
+
+
 
 # -----------------------
 # Main reward
@@ -293,18 +315,22 @@ def compute_reward(env, action: np.ndarray) -> tuple[float, dict]:
     if cfg.use_potential_rewards:
         phi_red_now = _phi_red(priv)
         phi_align_now = _phi_align(priv)
+        phi_inbox_now = _phi_inbox(priv)
         prev_phi_red = getattr(env, "_prev_phi_red", 0.0)
         prev_phi_align = getattr(env, "_prev_phi_align", 0.0)
+        prev_phi_inbox = getattr(env, "_prev_phi_inbox", 0.0)
         r_red = cfg.shaping_gamma * phi_red_now - prev_phi_red
         r_alignment = cfg.shaping_gamma * phi_align_now - prev_phi_align
+        r_in_box = cfg.shaping_gamma * phi_inbox_now - prev_phi_inbox
         env._prev_phi_red = phi_red_now
         env._prev_phi_align = phi_align_now
+        env._prev_phi_inbox = phi_inbox_now
     else:
         d = priv["min_red_dist"]
         r_red = -np.tanh(20.0 * d) if np.isfinite(d) else 0.0
         r_alignment = -np.tanh(60.0 * priv["radial_dist"]) if np.isfinite(d) else 0.0
+        r_in_box = 0.0 if (priv["red_stems_in_box_count"] == 1 and priv["green_stems_in_box_count"] == 0) else -1.0
 
-    r_in_box = 0.0 if (priv["red_stems_in_box_count"] == 1 and priv["green_stems_in_box_count"] == 0) else -1.0
     r_green_in_box_penalty = -1.0 if priv["green_stems_in_box_count"] > 0 else 0.0
     r_col = -1.0 if priv["collision_detected"] else 0.0
     r_dist = -np.tanh(5.0 * priv["total_displacement"])
