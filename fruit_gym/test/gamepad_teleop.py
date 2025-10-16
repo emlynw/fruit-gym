@@ -21,14 +21,23 @@ def main():
     video_dir = os.path.join(dir, 'videos')
     waitkey = 10
     reward_scales = {
-        'r_smooth': 0.5,
-        'r_energy': 0.5,
-        'r_red': 100.0,
-        'r_alignment': 100.0,
+        'r_grasp': 8.0,
+        'r_red': 4.0,
+        'r_alignment': 0.0,
+        'r_in_box': 0.0,
+        'r_green_in_box_penalty': 0.0,
+        'r_col': 0.0,
+        'r_dist': 1.0,
+        'r_attempt_close': 0.0,
+        'r_bad_grasp': 1.0,
+        'r_energy': 2.0,
+        'r_smooth': 1.0,
+        'r_gripper': 0.0,
+        'r_alive': 0.0
     }
 
     env = gym.make("PickMultiStrawbHardEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
-                   height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
+                   height=camera_res, gripper_pause=False, use_potential_rewards=False, include_privileged_obs=True, reward_scales=reward_scales)
     # env = gym.make("PickMultiStrawbEnv", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
     #                height=camera_res, gripper_pause=False, use_potential_rewards=True, include_privileged_obs=True, reward_scales=reward_scales)
     # env = gym.make("PickMultiStrawbEnvOld", physics_dt=0.001, randomize_domain=True, reward_type="dense", cameras=cameras,ee_dof=6, width=camera_res, 
@@ -66,7 +75,7 @@ def main():
                 action = info['intervene_action']
 
             obs, reward, terminated, truncated, info = env.step(action)
-            print(f"picked: {info['ripe_fruits_picked']}, bad grasps: {info['unripe_fruits_picked']}")
+            # print(f"picked: {info['ripe_fruits_picked']}, bad grasps: {info['unripe_fruits_picked']}")
             for camera in cameras:
                 frame = cv2.resize(cv2.cvtColor(obs[camera], cv2.COLOR_RGB2BGR), display_res)
                 # Write reward on the frame

@@ -1,4 +1,12 @@
 domain_randomization:
+  hard_mode:
+    enabled: true
+    p: 0.1
+    name_match: "fruit"    
+    ripe_materials: ["r1", "r2", "r3"]
+    unripe_materials: ["u1", "u2", "u3", "g1", "g2", "g3"]
+
+
   lighting:
     enabled: true
     position_range_low: [-0.8, -0.5, -0.05]
@@ -16,8 +24,8 @@ domain_randomization:
 
   action_scale:
     enabled: true
-    pos_scale_range: [0.008, 0.012]
-    rot_scale_range: [0.18, 0.3]
+    pos_mult: 0.3
+    rot_mult: 0.3
 
   robot_pose:
     enabled: true
@@ -37,7 +45,7 @@ domain_randomization:
 
   table:
     enabled: true
-    position_range_low: [-0.08, -0.02, -0.05]
+    position_range_low: [-0.05, -0.02, -0.05]
     position_range_high: [0.08, 0.02, 0.05]
     p_absent: 0.5
 
@@ -60,10 +68,10 @@ domain_randomization:
     enabled: true
     fruit_xmls: ["strawb_stiff.xml", "strawb_fork.xml", "strawb_fork_double.xml"]
     leaf_xmls: ["leaves.xml"]
-    min_fruits: 2
-    max_fruits: 6
-    min_leaves: 2
-    max_leaves: 4
+    min_fruits: 7
+    max_fruits: 11
+    min_leaves: 4
+    max_leaves: 8
     max_ripe: 5
     random_count: True
 
@@ -83,9 +91,9 @@ domain_randomization:
     enabled: true
     rotation_enabled: true
     yaw_only: False
-    rotation_angle_range: [-0.05, 0.05]
-    position_range_low: [-0.06, -0.06, -0.02]
-    position_range_high: [0.06, 0.06, 0.02]
+    rotation_angle_range: [-0.08, 0.08]
+    position_range_low: [-0.1, -0.18, -0.25]
+    position_range_high: [0.15, 0.18, 0.15]
 
   object_scale:
     enabled: true

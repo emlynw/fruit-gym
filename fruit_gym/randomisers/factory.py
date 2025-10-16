@@ -32,6 +32,7 @@ from fruit_gym.randomisers import (
     SpawnerRandomiser,
     RobotPoseRandomiser,
     CameraPoseRandomiser,
+    HardMode,
 )
 
 __all__ = ["build_randomisers"]
@@ -292,5 +293,9 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
                 p_absent=float(t_cfg.get("p_absent", 0.3)),
             )
         )
+
+    # -------------------- HARD MODE (ripe = farther +X) --------------------
+    if dr.get("hard_mode", {}).get("enabled", False):
+        rand.append(HardMode(**dr["hard_mode"]))
 
     return rand

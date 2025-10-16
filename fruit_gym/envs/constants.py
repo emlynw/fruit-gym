@@ -1,11 +1,11 @@
 import numpy as np
 
-PANDA_HOME = np.array([0.0, -1.6, 0.0, -2.54, -0.05, 2.49, 0.822], dtype=np.float32)
+PANDA_HOME = np.array([0.0, -1.43, 0.0, -2.6, -0.05, 2.73, 0.822], dtype=np.float32)
 GRIPPER_HOME = np.array([0.0141, 0.0141], dtype=np.float32)
 GRIPPER_MIN = 0
 GRIPPER_MAX = 0.004
 PANDA_XYZ = np.array([0.15, 0.0, 0.65], dtype=np.float32)
-CARTESIAN_BOUNDS = np.array([[0.0, -0.3, 0.55], [0.55, 0.3, 0.95]], dtype=np.float32)
+CARTESIAN_BOUNDS = np.array([[-0.05, -0.3, 0.5], [0.5, 0.3, 1.0]], dtype=np.float32)
 ROTATION_BOUNDS = np.array([[-np.pi/3, -np.pi/6, -np.pi/6],[np.pi/3, np.pi/6, np.pi/6]], dtype=np.float32)
 default_obj_pos = np.array([0.42, 0, 0.85])
 gripper_sleep = 0.6

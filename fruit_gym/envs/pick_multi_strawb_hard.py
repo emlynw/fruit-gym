@@ -101,6 +101,8 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         self.height = height
         self.pos_scale = pos_scale
         self.rot_scale = rot_scale
+        self._base_pos_scale = pos_scale  # for DR scaling
+        self._base_rot_scale = rot_scale  # for DR scaling
         self.cameras = cameras
         self.reward_type = reward_type
         self.gripper_pause = gripper_pause
@@ -125,6 +127,12 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
         if config_path is None:
             config_path = Path(__file__).parent.parent / "configs" / "multi_strawb.yaml"
         self.cfg = load_config(config_path)
+        a_cfg = self.cfg.get("domain_randomization", {}).get("action_scale", {})
+        m = float(a_cfg.get("mult", 0.0))
+        self._as_enabled = bool(a_cfg.get("enabled", False))
+        self._pos_jitter = float(a_cfg.get("pos_mult", m))  # symmetric ±fraction
+        self._rot_jitter = float(a_cfg.get("rot_mult", m))
+
 
         # Build randomisers once
         self._randomisers = build_randomisers(self.cfg, xml_dir=self.xml_path)
@@ -295,6 +303,9 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
             self.data = mujoco.MjData(self.model)
             self._index_handles()
             self._reset_arm_and_gripper()
+            # # Move to initial position
+            self.data.mocap_pos[0] = self.initial_position
+            self.data.mocap_quat[0] = np.roll(self.initial_orientation, 1)
 
             # Randomisers that affect compiled model/data
             for r in self._randomisers:
@@ -404,6 +415,17 @@ class PickMultiStrawbHardEnv(MujocoEnv, utils.EzPickle):
                 self._unripe_fruits_picked = 0
                 self._prev_phi_red = 0.0
                 self._prev_phi_align = 0.0
+
+                if self._as_enabled:
+                    # symmetric ±jitter around 1.0 using the env's rng
+                    pos_mult = self.np_random.uniform(1.0 - self._pos_jitter, 1.0 + self._pos_jitter) if self._pos_jitter > 0.0 else 1.0
+                    rot_mult = self.np_random.uniform(1.0 - self._rot_jitter, 1.0 + self._rot_jitter) if self._rot_jitter > 0.0 else 1.0
+                    self.pos_scale = self._base_pos_scale * pos_mult
+                    self.rot_scale = self._base_rot_scale * rot_mult
+                else:
+                    # ensure no leakage from a previous episode
+                    self.pos_scale = self._base_pos_scale
+                    self.rot_scale = self._base_rot_scale
 
                 return get_obs(self)
             else:

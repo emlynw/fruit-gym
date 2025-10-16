@@ -95,5 +95,4 @@ def get_obs(env) -> TDict[str, Any]:
     # Human viewer support (match your prior behavior)
     if env.render_mode == "human" and "wrist1" in getattr(env, "_viewers", {}):
         env._viewers["wrist1"].render(env.render_mode)
-
     return obs

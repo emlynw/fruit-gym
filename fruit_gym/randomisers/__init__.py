@@ -10,6 +10,7 @@ from .robot_pose import RobotPoseRandomiser
 from .meshes import MeshVariantRandomiser
 from .camera_pose import CameraPoseRandomiser
 from .table import TableRandomiser
+from .hard_mode import HardMode
 
 from .factory import build_randomisers   
 
@@ -28,5 +29,6 @@ __all__ = [
     "RobotPoseRandomiser",
     "CameraPoseRandomiser",
     "TableRandomiser",
+    "HardMode",
     "build_randomisers",
 ]
