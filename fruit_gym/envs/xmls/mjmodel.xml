@@ -332,7 +332,7 @@
                         <geom class="d435i_visual" mass="0.072" material="Metal_Casing" mesh="d435i_8"/>
                         <geom class="d435i_collision" size="0.00968864 0.0334784" pos="0.00145113 -0.000319327 -0.0135412" quat="0.029024 0.708312 0.0275527 0.704764" type="capsule" mass="0"/>
                         <site name="camera_1_site" pos="0.0325 0 -0.003" size="0.001" rgba="1 0 0 1"/>
-                        <body name="wrist1" pos="0.0225 0 -0.003" quat="0 0 1 0">
+                        <body name="wrist1" pos="0.0325 0 -0.003" quat="0 0 1 0">
                           <camera name="wrist1" pos="0 0 0" fovy="42"/>
                         </body>
                       </body>
@@ -348,7 +348,7 @@
                         <geom class="d435i_visual" mass="0.072" material="Metal_Casing" mesh="d435i_8"/>
                         <geom class="d435i_collision" size="0.00968864 0.0334784" pos="0.00145113 -0.000319327 -0.0135412" quat="0.029024 0.708312 0.0275527 0.704764" type="capsule" mass="0"/>
                         <site name="camera_2_site" pos="0.0325 0 -0.003" quat="0 0 1 0" size="0.001" rgba="1 0 0 1"/>
-                        <body name="wrist2" pos="0.0225 0 -0.003" quat="0 0 1 0">
+                        <body name="wrist2" pos="0.0325 0 -0.003" quat="0 0 1 0">
                           <camera name="wrist2" pos="0 0 0" fovy="42"/>
                         </body>
                       </body>

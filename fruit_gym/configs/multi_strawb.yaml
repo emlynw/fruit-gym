@@ -93,7 +93,7 @@ domain_randomization:
     yaw_only: False
     rotation_angle_range: [-0.08, 0.08]
     position_range_low: [-0.1, -0.18, -0.25]
-    position_range_high: [0.15, 0.18, 0.15]
+    position_range_high: [0.15, 0.18, 0.1]
 
   object_scale:
     enabled: true
