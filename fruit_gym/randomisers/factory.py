@@ -163,10 +163,13 @@ def build_randomisers(cfg: Mapping, *, xml_dir: Path | str = "") -> List[Randomi
         o_cfg = dr["object_positions"]
         pos_lo = np.asarray(o_cfg.get("position_range_low", (0, 0, 0)), float)
         pos_hi = np.asarray(o_cfg.get("position_range_high", (0, 0, 0)), float)
+        dev_std = o_cfg.get("position_deviation_std", (0.06, 0.06, 0.06))
         rot_enabled = o_cfg.get("rotation_enabled", True)
         rot_angle_range = tuple(o_cfg.get("rotation_angle_range", (-1.57, 1.57)))
+        cluster_rot_angle_range = tuple(o_cfg.get("cluster_rotation_angle_range", (-0.05, 0.05)))
         yaw_only = o_cfg.get("yaw_only", True)
-        rand.append(PoseRandomiser(name_prefix="vine", pos_lo=pos_lo, pos_hi=pos_hi, rot_enabled=rot_enabled, rot_angle_range=rot_angle_range, yaw_only=yaw_only))
+        rand.append(PoseRandomiser(name_prefix="vine", pos_lo=pos_lo, pos_hi=pos_hi, dev_std=dev_std, rot_enabled=rot_enabled, 
+                                   rot_angle_range=rot_angle_range, cluster_rot_angle_range=cluster_rot_angle_range, yaw_only=yaw_only))
 
     # ---------------- object scale -----------------------------------------
     if dr.get("object_scale", {}).get("enabled", False):
