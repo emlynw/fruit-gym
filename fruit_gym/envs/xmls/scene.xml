@@ -5,7 +5,7 @@
     <flag multiccd="enable"/>
   </option>
 
-  <size memory="2400M"/>
+  <size memory="3600M"/>
 
   <visual>
     <global azimuth="120" elevation="-20"/>
