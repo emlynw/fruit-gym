@@ -709,9 +709,9 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         return obs
 
     def _compute_reward(self, action):
-        block1_pos = self.data.sensor("block1_pos").data
+        stem1_pos = self.data.sensor("stem1_pos").data
         tcp_pos = self.data.sensor("long_pinch_pos").data
-        r_red =  -np.tanh(5 * np.linalg.norm(block1_pos - tcp_pos))
+        r_red =  -np.tanh(5 * np.linalg.norm(stem1_pos - tcp_pos))
 
         green_distance = 0
         for i in self.distractor_displacements:
@@ -773,7 +773,7 @@ class PickStrawbEnv(MujocoEnv, utils.EzPickle):
         info = {}
     
         rewards = {'r_grasp': r_grasp, 'r_red': r_red, 'r_col': r_col, 'r_dist': r_dist, 'r_energy': r_energy, 'r_smooth': r_smooth}
-        reward_scales = {'r_grasp': 8.0, 'r_red': 4.0, 'r_col': 0.5, 'r_dist': 1.0, 'r_energy': 2.0, 'r_smooth': 1.0}
+        reward_scales = {'r_grasp': 20.0, 'r_red': 4.0, 'r_col': 0.0, 'r_dist': 1.0, 'r_energy': 2.0, 'r_smooth': 1.0}
         rewards = {k: v * reward_scales[k] for k, v in rewards.items()}
         reward = np.clip(sum(rewards.values()), -1e4, 1e4)
         info = rewards
